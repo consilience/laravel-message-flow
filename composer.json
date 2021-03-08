@@ -1,0 +1,31 @@
+{
+    "name": "consilience/laravel-message-flow",
+    "description": "Use Laravel queues to push messages between aplications.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jason Judge",
+            "email": "jason.judge@consil.co.uk"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "illuminate/support": "^7.0|^8.0",
+        "php": "^7.4|^8.0"
+    },
+    "require-dev": {
+    },
+    "autoload": {
+        "psr-4": {
+            "Consilience\\Laravel\\MessageFlow\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Consilience\\Laravel\\MessageFlow\\Providers\\MessageFlowProvider"
+            ]
+        }
+    }
+}
