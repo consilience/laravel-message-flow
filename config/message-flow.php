@@ -19,19 +19,25 @@ return [
 
         // Mappings message names to queues.
 
+        // The fallback-mapping is for any queue-connection or queue-name
+        // for a message name that is not set (undefined or null).
+        // A null fallback-mapping will use the system default.
+
         'fallback-mapping' => [
             'queue-connection' => null,
             'queue-name' => null,
         ],
+
+        // Each message name can map to a queue connection and queue name.
 
         'name-mappings' => [
             'default' => [
                 'queue-connection' => null,
                 'queue-name' => null,
             ],
-            'foo' => [
+            'foo-example' => [
                 'queue-connection' => 'redis',
-                'queue-name' => 'distributed',
+                'queue-name' => 'distributed:queue',
             ],
         ],
     ],

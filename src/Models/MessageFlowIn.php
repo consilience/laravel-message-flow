@@ -19,8 +19,6 @@ class MessageFlowIn extends Model
     public const STATUS_COMPLETE = 'complete';
     public const STATUS_FAILED = 'failed';
 
-    public const DEFAULT_NAME = 'default';
-
     /**
      * Default values on creation.
      *
@@ -28,8 +26,6 @@ class MessageFlowIn extends Model
      */
     protected $attributes = [
         'status' => self::STATUS_NEW,
-        'name' => self::DEFAULT_NAME,
-        'payload' => '{}',
     ];
 
     /**

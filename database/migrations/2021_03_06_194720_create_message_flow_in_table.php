@@ -18,7 +18,7 @@ class CreateMessageFlowInTable extends Migration
             $table->timestamps();
 
             $table->string('status', 20)->default('new');
-            $table->string('name', 60)->default('default');
+            $table->string('name', 60);
 
             $table->json('payload');
         });
