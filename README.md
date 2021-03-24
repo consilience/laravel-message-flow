@@ -61,17 +61,17 @@ The flexibility is there.
 
 ## Installation
 
+### Requirements
 
-Requirements:
-
-- Laravel `7` or higher  
+- Laravel `8` or higher (laravel 7 is planned)
 - PHP `7.4` or higher
 
-
-This package is currently not registered on packagist, so add this repository into your composer.json repositories block.
+This package is currently not registered on packagist.
+Until it is, add this entry into your `composer.json` repositories block.
 
 ```json
 {
+    ...
     "repositories": [
         {
             "type": "vcs",
@@ -81,29 +81,33 @@ This package is currently not registered on packagist, so add this repository in
 }
 ```
 
-
-Via Composer
+### Install Using Composer
 
 ```bash
 composer require consilience/laravel-message-flow
 ```
 
+### Publish Migrations and Config
 
-Publish Migration and Config
+```
+php artisan vendor:publish \
+    --provider="Consilience\Laravel\MessageFlow\Providers\MessageFlowProvider"
+```
 
-`php artisan vendor:publish --provider="Consilience\Laravel\MessageFlow\Providers\MessageFlowProvider"`
+You can then run `php artisan migrate` to migrate the database.
 
-and run the migration `php artisan migrate`
+## Example Configuration Using Redis
 
 We'll show an example of setting up the package for sender and receiver application with redis.
-Firstly, we need to create a connection to redis database that is shared between the sender and receiver applications.
+First, we need a queue connection that is shared between the sender and receiver applications.
+We will use `redis` for te queue driver.
 
-By default, Laravel config would prepend the redis connection with a prefix derived from the application name.
-Since the sender and receiver applications would have different application names, we need to remove this prefix.
+Laravel, by default, sets a prefix for all redis keys that is unique to the application.
+This allows multiple applications to use a single redis database without keys clashing.
+For our purposes, we want a prefix that *is* shared between applications.
 
+The application-wide prefix added to redis keys is defined in `config/database.php`:
 
-go to `config/database.php` and remove or comment out the prefix from the global redis option, 
-and copy them to the individual redis connection instead:
 ```
     'redis' => [
 
@@ -111,8 +115,29 @@ and copy them to the individual redis connection instead:
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            // Comment or remove this global prefix option
-            // 'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
+
+            // Remove this default global prefix option:
+
+            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
+        ],
+
+        // ...
+    ],
+```
+
+The `default` and the `cache` database entries will then need the prefix adding
+to them. This will restore the prefix to prevent them clashing with other
+applications using the same redis database:
+
+`config/database.php`:
+
+```
+    'redis' => [
+
+        'client' => env('REDIS_CLIENT', 'phpredis'),
+
+        'options' => [
+            'cluster' => env('REDIS_CLUSTER', 'redis'),
         ],
 
         'default' => [
@@ -121,7 +146,9 @@ and copy them to the individual redis connection instead:
             'password' => env('REDIS_PASSWORD', null),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
-            // Add the prefix here
+
+            // Prefix needed here:
+
             'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
         ],
 
@@ -131,44 +158,99 @@ and copy them to the individual redis connection instead:
             'password' => env('REDIS_PASSWORD', null),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_CACHE_DB', '1'),
-            // And here
+            
+            // Prefix needed here:
+
             'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
         ],
     ],
 ```
 
-Next, we want to create a new redis connection for the message flow:
-```php
-    // you can give this any name other than your application name
-    'messenger' => [
-        'url' => env('REDIS_URL'),
-        'host' => env('REDIS_HOST', '127.0.0.1'),
-        'password' => env('REDIS_PASSWORD', null),
-        'port' => env('REDIS_PORT', '6379'),
-        'database' => env('REDIS_CACHE_DB', '2'),
-    ],
-```
+Now to add the shared connection.
+This provides access to the redis database that both applications will share.
 
-Next, you need to map the new redis connection to the message-flow config to indicate that as the connection to use.
-Go to `config/message-flow.php` and set:
+`config/database.php`:
 
 ```php
-    'name-mappings' => [
-        'default' => [
-            'queue-connection' => 'redis',
-            'queue-name' => 'messenger',
+    'redis' => [
+        'client' => env('REDIS_CLIENT', 'phpredis'),
+
+        // ...
+
+        // Give this connection any name other than your application name.
+        // You may need to set different credentials if the shared redis
+        // database is not the default database.
+
+        'message-flow-database' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD', null),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_CACHE_DB', '0'),
+            'prefix' => 'message-flow:',
         ],
     ],
 ```
 
-Lastly, run your redis queue worker to listen on the defined queue:
-`php artisan queue:work redis --queue=messenger`
+The shared queue connection, using redis, should now be complete.
+We can configure a queue using the shared connection:
+
+`config/queue.php`:
+
+```php
+    'connections' => [
+        // ...
+
+        'message-flow-queue-connection' => [
+            'driver' => 'redis',
+            'connection' => 'message-flow-database',
+            'queue' => env('REDIS_QUEUE', 'default'),
+            'retry_after' => 90,
+            'block_for' => null,
+        ],
+    ],
+```
+
+Now we configure *Message Flow* to use this connection and database.
+
+`config/message-flow.php`:
+
+```php
+    'name-mappings' => [
+        'default' => [
+            'queue-connection' => 'message-flow-queue-connection',
+            'queue-name' => 'message-flow',
+        ],
+    ],
+```
+
+Both the sending and receiving applications will have the same settings.
+The receiving application will listen to the queue to handle the incoming
+messages:
+
+    php artisan queue:work message-flow-queue-connection --queue=message-flow
 
 ## Sending an example message
 
 You can send a message simply by creating a new MessageFlowOut model from your sender application:
-`Consilience\Laravel\MessageFlow\Models\MessageFlowOut::create(["payload" => ["data" => "test data here"]]);`
 
-To retrieve the message from the receiver application:
-`Consilience\Laravel\MessageFlow\Models\MessageFlowIn::all()`
+```php
+use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
+
+MessageFlowOut::create(["payload" => ["data" => "test data here"]]);
+
+MessageFlowOut::create(["payload" => $myModel]);
+```
+
+To retrieve the message from the receiver application, a listener can be
+pointed at the inbound model:
+
+```php
+use Consilience\Laravel\MessageFlow\Models\MessageFlowIn;
+
+// TODO: listener example for MessageFlowIn
+// TODO: mention the states
+// TODO: names and routing (advanced)
+// TODO: outbound pipeline (advanced)
+```
 
