@@ -3,12 +3,12 @@
 
 ## Background
 
-Simply, this package provides a pipe between two Laravel applications,
+This package provides a pipe between two (or more) Laravel applications,
 to send messages from a model on one application to a model on the
 other application. It uses Laravel queues to pass the message across.
 It attempts to do this robustly, reliably and flexibly.
 
-If you can share a queue database between two Laravel applications,
+If you can share a single queue database between Laravel applications,
 then this package will support passing messages between these applications.
 
 You can mix as many queue connections and queues as you like to route
@@ -16,7 +16,7 @@ the messages between multiple applications.
 
 The use-case for this package is to replace a number of webhooks between
 a suite of applications. The webhooks were becoming difficult to set
-up, maintain and monitor. This aims to tackle those problems.
+up, maintain and monitor. This package aims to tackle those problems.
 
 ## Messages
 
@@ -26,7 +26,7 @@ reference to any models or objects in the source application.
 It's just data that can stand on its own.
 
 Every message is given a UUID that gets carried across with it,
-and is given a name that cam be used for routing to specific queues
+and is given a name that can be used for routing to specific queues
 when sending, or routing to specific jobs when receiving.
 
 ## Reliability
@@ -34,7 +34,7 @@ when sending, or routing to specific jobs when receiving.
 This package ensures the message is dispatched to a queue.
 Once dispatched, responsibility is handed over to the queuing broker
 and it is considered sent. There is no end-to-end confirmation of receipt,
-though that can be easily built around this solution with a simple message
+though that can be easily achieved with a simple message
 in the opposite direction.
 
 ## Flexibility
@@ -51,7 +51,7 @@ messages stay on the sender application for longer. You can add custom
 routing rules, or maybe "tee" the messages into multiple destinations
 (assuming that is not something you can do in the queue broker already).
 You may simply want to put in additional logging.
-The flexibilioty is there.
+The flexibility is there.
 
 ## Configuration
 
@@ -96,9 +96,10 @@ Publish Migration and Config
 and run the migration `php artisan migrate`
 
 We'll show an example of setting up the package for sender and receiver application with redis.
-Firstly, we need to create a connection to redis database that is shared between both sender and receiver application.
+Firstly, we need to create a connection to redis database that is shared between the sender and receiver applications.
+
 By default, Laravel config would prepend the redis connection with a prefix derived from the application name.
-Since the sender and receiver application would have different application name, we need to remove this prefix.
+Since the sender and receiver applications would have different application names, we need to remove this prefix.
 
 
 go to `config/database.php` and remove or comment out the prefix from the global redis option, 
@@ -136,7 +137,7 @@ and copy them to the individual redis connection instead:
     ],
 ```
 
-Next, we would want to create a new redis connection for the message flow:
+Next, we want to create a new redis connection for the message flow:
 ```php
     // you can give this any name other than your application name
     'messenger' => [
