@@ -1,4 +1,21 @@
 
+<!-- TOC -->
+
+- [Laravel Message Flow](#laravel-message-flow)
+    - [Background](#background)
+    - [Messages](#messages)
+    - [Reliability](#reliability)
+    - [Flexibility](#flexibility)
+    - [Configuration](#configuration)
+- [Installation](#installation)
+    - [Requirements](#requirements)
+    - [Install Using Composer](#install-using-composer)
+    - [Publish Migrations and Config](#publish-migrations-and-config)
+    - [Example Configuration Using Redis](#example-configuration-using-redis)
+    - [Sending an example message](#sending-an-example-message)
+
+<!-- /TOC -->
+
 # Laravel Message Flow
 
 ## Background
@@ -55,13 +72,18 @@ The flexibility is there.
 
 ## Configuration
 
-...
+Here is an overview of the configuration steps:
 
-# Quickstart
+1. On sender and receiver, create and configure a laravel queue that
+   will be shared by both applications.
+   An example configuration of a shared redis queue is given below,
+   but any driver can be used.
+2. Configure the Message Flow package to use the shared queue.
+3. Create an observer to handle inbound messages on the receiver.
 
-## Installation
+# Installation
 
-### Requirements
+## Requirements
 
 - Laravel `8` or higher (laravel 7 is planned)
 - PHP `7.4` or higher
@@ -71,7 +93,6 @@ Until it is, add this entry into your `composer.json` repositories block.
 
 ```json
 {
-    ...
     "repositories": [
         {
             "type": "vcs",
@@ -81,13 +102,13 @@ Until it is, add this entry into your `composer.json` repositories block.
 }
 ```
 
-### Install Using Composer
+## Install Using Composer
 
 ```bash
 composer require consilience/laravel-message-flow
 ```
 
-### Publish Migrations and Config
+## Publish Migrations and Config
 
 ```
 php artisan vendor:publish \
