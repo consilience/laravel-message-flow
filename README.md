@@ -1,3 +1,4 @@
+# Laravel Message Flow
 
 <!-- TOC -->
 
@@ -15,8 +16,6 @@
     - [Sending an example message](#sending-an-example-message)
 
 <!-- /TOC -->
-
-# Laravel Message Flow
 
 ## Background
 
