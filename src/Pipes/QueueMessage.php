@@ -19,9 +19,11 @@ class QueueMessage implements RoutingPipe
     public function handle(MessageFlowOut $messageFlowOut, Closure $next)
     {
         // This is the job to pick the message up at the other end.
+        // We handle the payload in its raw JSON encoded form until we
+        // get it to the other side.
 
         $pendingJob = dispatch(new ReceiveMessage(
-            $messageFlowOut->payload,
+            $messageFlowOut->jsonPayload,
             $messageFlowOut->uuid,
             $messageFlowOut->name
         ));
@@ -39,6 +41,7 @@ class QueueMessage implements RoutingPipe
 
         try {
             unset($pendingJob);
+
         } catch (Throwable $exception) {
             $messageFlowOut->status = MessageFlowOut::STATUS_FAILED;
             $messageFlowOut->save();

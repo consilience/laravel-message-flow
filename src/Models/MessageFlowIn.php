@@ -75,4 +75,15 @@ class MessageFlowIn extends Model
     {
         return 'uuid';
     }
+
+    /**
+     * Set the payload as a JSON string.
+     *
+     * @param string $value
+     * @return void
+     */
+    public function setJsonPayloadAttribute(string $value)
+    {
+        $this->attributes['payload'] = $value;
+    }
 }

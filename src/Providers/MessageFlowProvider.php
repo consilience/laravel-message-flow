@@ -2,6 +2,8 @@
 
 namespace Consilience\Laravel\MessageFlow\Providers;
 
+use Consilience\Laravel\MessageFlow\Console\Commands\CreateMessage;
+use Consilience\Laravel\MessageFlow\Console\Commands\ListMessages;
 use Illuminate\Support\ServiceProvider;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Consilience\Laravel\MessageFlow\Observers\MessageFlowOutObserver;
@@ -38,5 +40,12 @@ class MessageFlowProvider extends ServiceProvider
         ], 'migrations');
 
         MessageFlowOut::observe(MessageFlowOutObserver::class);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                CreateMessage::class,
+                ListMessages::class,
+            ]);
+        }
     }
 }

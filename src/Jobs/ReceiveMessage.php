@@ -22,11 +22,11 @@ class ReceiveMessage implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable;
 
     /**
-     * The structured message that has been sent.
+     * The structured message that has been sent, as a JSON string.
      *
-     * @var mixed
+     * @var string
      */
-    protected $payload;
+    protected $jsonPayload;
 
     /**
      * Matches the UUID on the sending application.
@@ -48,11 +48,15 @@ class ReceiveMessage implements ShouldQueue
      * This is necessary as the receiving application will not have
      * the models of the sending application.
      *
+     * @param string $payload JSON format
+     * @param string $uuid
+     * @param string|null $name
+     *
      * @return void
      */
-    public function __construct($payload, string $uuid, ?string $name = null)
+    public function __construct(string $jsonPayload, string $uuid, ?string $name = null)
     {
-        $this->payload = $payload;
+        $this->jsonPayload = $jsonPayload;
         $this->uuid = $uuid;
         $this->name = $name;
     }
@@ -66,10 +70,24 @@ class ReceiveMessage implements ShouldQueue
     {
         // Store the payload through the model.
 
+        if (MessageFlowIn::where('uuid', '=', $this->uuid)->exists()) {
+            // Might want to compare hashes of the payload to confirm it
+            // really is the same message.
+
+            Log::warning('Received duplicate message; ignoring', [
+                'uuid' => $this->uuid,
+                'name' => $this->name,
+            ]);
+
+            return;
+        }
+
         $messageCacheIn = new MessageFlowIn([
             'uuid' => $this->uuid,
-            'payload' => $this->payload,
+            //'jsonPayload' => $this->jsonPayload,
         ]);
+
+        $messageCacheIn->jsonPayload = $this->jsonPayload;
 
         if ($this->name !== null) {
             $messageCacheIn->name = $this->name;

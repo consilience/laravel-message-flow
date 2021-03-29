@@ -4,7 +4,7 @@ namespace Consilience\Laravel\MessageFlow\Observers;
 
 /**
  * The observer events must not change the message model, for risk
- * of and endless loop. Instead, event actions are all dispatched
+ * of an endless loop. Instead, event actions are all dispatched
  * to a separate job.
  */
 
@@ -38,7 +38,7 @@ class MessageFlowOutObserver
     {
         if ($messageFlowOut->status !== $messageFlowOut->getOriginal('status')
             && $messageFlowOut->status === MessageFlowOut::STATUS_NEW) {
-                // Becomes new status from some custom status.
+                // Becomes "new" status from ny other status.
 
                 dispatch(new RoutingPipeline($messageFlowOut));
             }

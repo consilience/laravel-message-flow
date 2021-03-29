@@ -103,4 +103,25 @@ class MessageFlowOut extends Model
     {
         return $this->status === static::STATUS_COMPLETE;
     }
+
+    /**
+     * Select only records that need to be dispatched to the queue.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeToSend($query)
+    {
+        $query->where('status', '=', static::STATUS_NEW);
+    }
+
+    /**
+     * Return the payload as a JSON encoded string.
+     *
+     * @return string
+     */
+    public function getJsonPayloadAttribute(): string
+    {
+        return $this->attributes['payload'] ?? '[]';
+    }
 }
