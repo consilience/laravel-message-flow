@@ -14,6 +14,12 @@ class RouteFromConfig implements RoutingPipe
 {
     public function handle(MessageFlowOut $messageFlowOut, Closure $next)
     {
+        if ($messageFlowOut->queue_connection !== null && $messageFlowOut->queue_name !== null) {
+            // If the queue and connection are already chosen, then skip this pipe.
+
+            return  $next($messageFlowOut);
+        }
+
         $name = $messageFlowOut->name;
 
         $queueConnection = config(

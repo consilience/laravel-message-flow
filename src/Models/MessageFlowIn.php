@@ -86,4 +86,38 @@ class MessageFlowIn extends Model
     {
         $this->attributes['payload'] = $value;
     }
+
+    /**
+     * Check if the record is new. Used by observer to confirm ready to process.
+     *
+     * @return boolean
+     */
+    public function isNew(): bool
+    {
+        return $this->status === static::STATUS_NEW;
+    }
+
+    /**
+     * Mark the message as processed.
+     *
+     * @return self
+     */
+    public function setComplete()
+    {
+        $this->status = static::STATUS_COMPLETE;
+
+        return $this;
+    }
+
+    /**
+     * Mark the message as failed to processed.
+     *
+     * @return self
+     */
+    public function setFailed()
+    {
+        $this->status = static::STATUS_FAILED;
+
+        return $this;
+    }
 }

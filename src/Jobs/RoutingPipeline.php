@@ -51,7 +51,9 @@ class RoutingPipeline implements ShouldQueue
         // is ready to be sent to the queue.
         // Every pipe must save its changes if it has made any.
 
-        Log::info('Running routing pipeline');
+        Log::info('Running routing pipeline', [
+            'messageFlowOutUuid' => $this->messageFlowOut->uuid,
+        ]);
 
         $pipes = config('message-flow.out.routing-pipeline', []);
 
@@ -60,6 +62,7 @@ class RoutingPipeline implements ShouldQueue
             ->through($pipes)
             ->then(function ($messageFlowOut) {
                 if ($messageFlowOut->exists) {
+                    // Save changes only if a pipe has not deleted it.
                     $messageFlowOut->save();
                 }
 

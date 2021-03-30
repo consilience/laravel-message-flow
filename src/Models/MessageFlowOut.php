@@ -105,14 +105,25 @@ class MessageFlowOut extends Model
     }
 
     /**
+     * Check if the record is new. Used by observer to confirm ready to send.
+     *
+     * @return boolean
+     */
+    public function isNew(): bool
+    {
+        return $this->status === static::STATUS_NEW;
+    }
+
+    /**
      * Select only records that need to be dispatched to the queue.
+     * These are NEW and also FAILED that will need to be sent again.
      *
      * @param  \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeToSend($query)
     {
-        $query->where('status', '=', static::STATUS_NEW);
+        $query->whereIn('status', [static::STATUS_NEW, static::STATUS_FAILED]);
     }
 
     /**

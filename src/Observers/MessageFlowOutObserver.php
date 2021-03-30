@@ -21,7 +21,7 @@ class MessageFlowOutObserver
      */
     public function created(MessageFlowOut $messageFlowOut)
     {
-        if ($messageFlowOut->status === MessageFlowOut::STATUS_NEW) {
+        if ($messageFlowOut->isNew()) {
             // Landed with the "new" status, so is ready to be pushed on.
 
             dispatch(new RoutingPipeline($messageFlowOut));
@@ -37,7 +37,7 @@ class MessageFlowOutObserver
     public function updated(MessageFlowOut $messageFlowOut)
     {
         if ($messageFlowOut->status !== $messageFlowOut->getOriginal('status')
-            && $messageFlowOut->status === MessageFlowOut::STATUS_NEW) {
+            && $messageFlowOut->isNew()) {
                 // Becomes "new" status from ny other status.
 
                 dispatch(new RoutingPipeline($messageFlowOut));

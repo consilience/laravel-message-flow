@@ -18,6 +18,12 @@ class QueueMessage implements RoutingPipe
 {
     public function handle(MessageFlowOut $messageFlowOut, Closure $next)
     {
+        // Skip if not in a state for dispatching to the queue.
+
+        if ($messageFlowOut->status !== MessageFlowOut::STATUS_NEW && $messageFlowOut->status !== MessageFlowOut::STATUS_FAILED) {
+            return $next($messageFlowOut);
+        }
+
         // This is the job to pick the message up at the other end.
         // We handle the payload in its raw JSON encoded form until we
         // get it to the other side.
@@ -37,7 +43,7 @@ class QueueMessage implements RoutingPipe
         }
 
         // Here force the job to dispatch immediately by destroying it.
-        // If there are any problems with the config, then mark is as a fail.
+        // If there are any problems due to config, then mark it as a fail.
 
         try {
             unset($pendingJob);
@@ -60,6 +66,6 @@ class QueueMessage implements RoutingPipe
 
         $messageFlowOut->save();
 
-        return  $next($messageFlowOut);
+        return $next($messageFlowOut);
     }
 }

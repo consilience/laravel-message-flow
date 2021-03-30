@@ -14,6 +14,7 @@
     - [Publish Migrations and Config](#publish-migrations-and-config)
     - [Example Configuration Using Redis](#example-configuration-using-redis)
     - [Sending an example message](#sending-an-example-message)
+- [TODO](#todo)
 
 <!-- /TOC -->
 
@@ -265,12 +266,74 @@ MessageFlowOut::create(["payload" => $myModel]);
 To retrieve the message from the receiver application, a listener can be
 pointed at the inbound model:
 
+    php artisan make:observer MessageFlowObserver \
+        --model='Consilience\Laravel\MessageFlow\Models\MessageFlowIn'
+
+Any example obersver may look like this:
+
 ```php
+<?php
+
+namespace App\Observers;
+
 use Consilience\Laravel\MessageFlow\Models\MessageFlowIn;
 
-// TODO: listener example for MessageFlowIn
-// TODO: mention the states
-// TODO: names and routing (advanced)
-// TODO: outbound pipeline (advanced)
+class MessageFlowObserver
+{
+    /**
+     * Handle the MessageFlowIn "created" event.
+     *
+     * @param  \App\Models\Consilience\Laravel\MessageFlow\Models\MessageFlowIn  $messageFlowIn
+     * @return void
+     */
+    public function created(MessageFlowIn $messageFlowIn)
+    {
+        if ($messageFlowIn->isNew()) {
+            // Process the message.
+
+            // ...
+
+            // A number of options once processed, either here or in
+            // a dispatched job:
+
+            $messageFlowIn->setComplete()->save();
+            // $messageFlowIn->setFailed()->save();
+            // $messageFlowIn->delete();
+            // or a custom action or status.            
+        }
+    }
+}
 ```
 
+The observer would need to be registered, for example in `App\Providers\EventServiceProvider`:
+
+```php
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Consilience\Laravel\MessageFlow\Models\MessageFlowIn;
+use App\Observers\MessageFlowObserver;
+
+class EventServiceProvider extends ServiceProvider
+{
+    //...
+
+    /**
+     * Register any events for your application.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        MessageFlowIn::observe(MessageFlowObserver::class);
+    }
+}
+```
+
+# TODO
+
+* TODO: overview of the states
+* TODO: names and routing (advanced)
+* TODO: outbound pipeline (advanced)
