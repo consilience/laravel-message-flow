@@ -14,13 +14,16 @@ class MessageFlowOut extends Model
 
     /**
      * The default supported states for each message in the cache.
-     * Other arbitrary states can be added.
+     * Other arbitrary states can be used, and will be ignored by
+     * this package.
      */
     public const STATUS_NEW = 'new';
     public const STATUS_COMPLETE = 'complete';
     public const STATUS_FAILED = 'failed';
 
     public const DEFAULT_NAME = 'default';
+
+    public const DEFAULT_PAYLOAD = '{}';
 
     /**
      * Default values on creation.
@@ -30,7 +33,7 @@ class MessageFlowOut extends Model
     protected $attributes = [
         'status' => self::STATUS_NEW,
         'name' => self::DEFAULT_NAME,
-        'payload' => '{}',
+        'payload' => self::DEFAULT_PAYLOAD,
     ];
 
     /**
@@ -133,6 +136,6 @@ class MessageFlowOut extends Model
      */
     public function getJsonPayloadAttribute(): string
     {
-        return $this->attributes['payload'] ?? '[]';
+        return $this->attributes['payload'] ?? self::DEFAULT_PAYLOAD;
     }
 }

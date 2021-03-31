@@ -14,6 +14,9 @@ use Consilience\Laravel\MessageFlow\Jobs\SendMessage;
 
 class DeleteCompleteMessage implements RoutingPipe
 {
+    /**
+     * @inheritDoc
+     */
     public function handle(MessageFlowOut $messageFlowOut, Closure $next)
     {
         if ($messageFlowOut->status === MessageFlowOut::STATUS_COMPLETE) {

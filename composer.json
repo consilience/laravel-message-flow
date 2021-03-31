@@ -15,16 +15,22 @@
         "php": "^7.4|^8.0"
     },
     "require-dev": {
+        "phpunit/phpunit": "10.0.x-dev"
     },
     "autoload": {
         "psr-4": {
             "Consilience\\Laravel\\MessageFlow\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+          "Consilience\\Laravel\\MessageFlow\\Tests\\": "tests"
+        }
+    },
     "extra": {
         "laravel": {
             "providers": [
-                "Consilience\\Laravel\\MessageFlow\\Providers\\MessageFlowProvider"
+                "Consilience\\Laravel\\MessageFlow\\MessageFlowServiceProvider"
             ]
         }
     }

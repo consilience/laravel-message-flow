@@ -11,5 +11,12 @@ use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 
 interface RoutingPipe
 {
+  /**
+   * Handle a stage [a pipe] in the pipeline.
+   *
+   * @param MessageFlowOut $content
+   * @param Closure $next
+   * @return void
+   */
   public function handle(MessageFlowOut $content, Closure $next);
 }

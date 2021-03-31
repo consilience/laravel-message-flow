@@ -44,11 +44,12 @@ class CreateMessage extends Command
     public function handle()
     {
         $name = $this->option('name');
-        $payload = $this->option('payload') ?: '{}';
-        $status = $this->option('status') ?: 'new';
+        $payload = $this->option('payload') ?: MessageFlowOut::DEFAULT_PAYLOAD;
+        $status = $this->option('status') ?: MessageFlowOut::STATUS_NEW;
 
         try {
             $payload = json_decode($payload, false, 512, JSON_THROW_ON_ERROR);
+            
         } catch (Throwable $exception) {
             $this->error(sprintf(
                 'Failed to parse JSON: %d %s',

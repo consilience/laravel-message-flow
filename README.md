@@ -14,6 +14,9 @@
     - [Publish Migrations and Config](#publish-migrations-and-config)
     - [Example Configuration Using Redis](#example-configuration-using-redis)
     - [Sending an example message](#sending-an-example-message)
+- [Artisan Commands](#artisan-commands)
+    - [Create Message](#create-message)
+    - [List Messages](#list-messages)
 - [TODO](#todo)
 
 <!-- /TOC -->
@@ -112,7 +115,7 @@ composer require consilience/laravel-message-flow
 
 ```
 php artisan vendor:publish \
-    --provider="Consilience\Laravel\MessageFlow\Providers\MessageFlowProvider"
+    --provider="Consilience\Laravel\MessageFlow\MessageFlowServiceProvider"
 ```
 
 You can then run `php artisan migrate` to migrate the database.
@@ -264,12 +267,12 @@ MessageFlowOut::create(["payload" => $myModel]);
 ```
 
 To retrieve the message from the receiver application, a listener can be
-pointed at the inbound model:
+pointed at the inbound model. Create an observer:
 
     php artisan make:observer MessageFlowObserver \
         --model='Consilience\Laravel\MessageFlow\Models\MessageFlowIn'
 
-Any example obersver may look like this:
+An example observer may be set up like this:
 
 ```php
 <?php
@@ -296,10 +299,10 @@ class MessageFlowObserver
             // A number of options once processed, either here or in
             // a dispatched job:
 
-            $messageFlowIn->setComplete()->save();
-            // $messageFlowIn->setFailed()->save();
-            // $messageFlowIn->delete();
-            // or a custom action or status.            
+            $messageFlowIn->setComplete()->save(); // Set it as processed
+            $messageFlowIn->setFailed()->save(); // Set it as unprocessed
+            $messageFlowIn->delete(); // Delete the message (not before a dispatched job is processed)
+            // or a custom action or status.
         }
     }
 }
@@ -332,8 +335,57 @@ class EventServiceProvider extends ServiceProvider
 }
 ```
 
+# Artisan Commands
+
+This package introduces a few new artisan commands:
+
+## Create Message
+
+This command allows you to create a new outbound message.
+
+    php artisan message-flow:create-message \
+        --name='routing-name' \
+        --payload='{"json":"payload"}' \
+        --status=new
+
+If no options are provided, the name will be `default`, the status `new` and
+the payload an empty object.
+
+## List Messages
+
+This command will list the messages currently in the cache tables.
+These are messages that are being sent, or have been sent and have
+not yet been deleted. They are also messages that have been received
+and also not been deleted.
+
+    php artisan message-flow:list-messages \
+        --direction={inbound|outbound} \
+        --status={new|complete|failed|other} \
+        --uuid={uuid-of-message} \
+        --limit=20 \
+        --page=1 \
+        --process
+
+The `status` and `uuid` options can take multiple values.
+
+The `limit` option sets the number of records returned.
+This is effectively the page size.
+
+The `page` optuion specifies which page (of size `limit`) to display.
+Page numbers start at 1 for the first page.
+
+The `process` option will dispatch jobs for messages that have not yet been processed.
+For outbound messages that will be matching messages in the `new` or `failed` states.
+This will generally only be needed for testing or kicking off failed observers.
+For inbound messages in the `new` state, this will fire the eloquent `created` event
+to kick the custom observers into action.
+
+With the `-v` option, the payload will be included in the listing.
+Some payloads may be large.
+
 # TODO
 
-* TODO: overview of the states
-* TODO: names and routing (advanced)
-* TODO: outbound pipeline (advanced)
+* Overview of the states
+* Names and routing (advanced)
+* Outbound pipeline (advanced)
+* Tests

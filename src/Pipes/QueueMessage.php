@@ -16,6 +16,9 @@ use Throwable;
 
 class QueueMessage implements RoutingPipe
 {
+    /**
+     * @inheritDoc
+     */
     public function handle(MessageFlowOut $messageFlowOut, Closure $next)
     {
         // Skip if not in a state for dispatching to the queue.
