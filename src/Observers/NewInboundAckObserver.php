@@ -7,11 +7,11 @@ namespace Consilience\Laravel\MessageFlow\Observers;
  *
  * The ack message is tied up to the original outbound message,
  * which is marked as `complete`.
- * 
+ *
  * The outbound pipeline job is then dispatched to perform any
  * tidy-up needed, such as deleting the `complete` outbound
  * message.
- * 
+ *
  * The inbound ack message is deleted once it has been processed.
  */
 
@@ -43,7 +43,7 @@ class NewInboundAckObserver
      */
     public function updated(MessageFlowIn $messageFlowIn)
     {
-        if ($messageFlowOut->status !== $messageFlowIn->getOriginal('status')
+        if ($messageFlowIn->status !== $messageFlowIn->getOriginal('status')
             && $messageFlowIn->isNew()) {
             // Becomes "new" status from ny other status.
 
@@ -52,8 +52,8 @@ class NewInboundAckObserver
     }
 
     /**
-     * @param MessageFlowIn $messageFlowIn 
-     * @return void 
+     * @param MessageFlowIn $messageFlowIn
+     * @return void
      */
     protected function handle(MessageFlowIn $messageFlowIn)
     {

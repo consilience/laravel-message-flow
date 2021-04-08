@@ -3,6 +3,7 @@
 #
 
 #msc=modern_blue;
+background.color = "253,253,253";
 
 A: Application A\nSender {
     #AA: App Logic;
@@ -17,18 +18,18 @@ B: Application B\nReceiver {
     BA: Jobs;
 };
 
-->AO: Create Msg;
+=>AO: Create Msg;
 activate AO;
 AO=>QtoB: Msg;
 activate QtoB;
 QtoB=>BI: Msg;
 deactivate QtoB;
 activate BI;
-BI->BO: Create MsgAck;
+BI=>BO: Create MsgAck;
 activate BO;
 
 box BA..BA: Msg Handler {
-    BI->BA: Msg;
+    BI=>BA: Msg;
     box BA--BA: Process Msg;
     BI<-BA: Delete Msg;
     deactivate BI;

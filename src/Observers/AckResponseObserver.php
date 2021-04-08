@@ -35,7 +35,7 @@ class AckResponseObserver
      */
     public function updated(MessageFlowIn $messageFlowIn)
     {
-        if ($messageFlowOut->status !== $messageFlowIn->getOriginal('status')
+        if ($messageFlowIn->status !== $messageFlowIn->getOriginal('status')
             && $messageFlowIn->isNew()) {
                 // Becomes "new" status from ny other status.
 
@@ -44,8 +44,8 @@ class AckResponseObserver
     }
 
     /**
-     * @param MessageFlowIn $messageFlowIn 
-     * @return void 
+     * @param MessageFlowIn $messageFlowIn
+     * @return void
      */
     protected function handle(MessageFlowIn $messageFlowIn)
     {
