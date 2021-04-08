@@ -2,18 +2,20 @@
 
 use Consilience\Laravel\MessageFlow\Pipes\RouteFromConfig;
 use Consilience\Laravel\MessageFlow\Pipes\QueueMessage;
+use Consilience\Laravel\MessageFlow\Pipes\CompleteQueuedMessage;
 use Consilience\Laravel\MessageFlow\Pipes\DeleteCompleteMessage;
 
 return [
 
-    // Outbound messages.
+    // Handing outbound messages.
 
     'out' => [
-        // The pipeline to take a new outbound message through.
+        // The pipeline to process a new outbound message.
 
         'routing-pipeline' => [
             RouteFromConfig::class,
             QueueMessage::class,
+            CompleteQueuedMessage::class,
             //DeleteCompleteMessage::class,
         ],
 
@@ -38,6 +40,35 @@ return [
             'foo-example' => [
                 'queue-connection' => 'redis',
                 'queue-name' => 'distributed:queue',
+            ],
+        ],
+
+        // List of message names that are set to `complete` immediately
+        // they are `queued`.
+        // Needs the `CompleteQueuedMessage` pipe.
+
+        // CHECKME: do the opposite?
+
+        'complete-on-queued' => [
+            '*',
+        ],
+    ],
+
+    // Handling inbound messages.
+
+    'in' => [
+        // Inbound messages that need to be acknowledged with a return message.
+        // This maps the original inbound message name to the name of the
+        // ack message response.
+
+        'ack-required' => [
+            'my-special-message' => [
+                'name' => 'my-special-message-acknowledgement',
+            ],
+            // `*` matches anything.
+            // `{name}` is the original message name.
+            'msg-*' => [
+                'template' => '{name}-ack',
             ],
         ],
     ],

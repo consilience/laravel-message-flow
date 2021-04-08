@@ -2,8 +2,9 @@
 
 namespace Consilience\Laravel\MessageFlow\Tests;
 
-use Consilience\Laravel\MessageFlow\MessageFlowProvider;
+use Consilience\Laravel\MessageFlow\MessageFlowServiceProvider;
 
+/** @package Consilience\Laravel\MessageFlow\Tests */
 class TestCase extends \Orchestra\Testbench\TestCase
 {
   public function setUp(): void
@@ -15,7 +16,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
   protected function getPackageProviders($app)
   {
     return [
-        MessageFlowProvider::class,
+      MessageFlowServiceProvider::class,
     ];
   }
 

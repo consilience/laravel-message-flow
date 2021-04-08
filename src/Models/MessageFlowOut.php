@@ -18,6 +18,7 @@ class MessageFlowOut extends Model
      * this package.
      */
     public const STATUS_NEW = 'new';
+    public const STATUS_QUEUED = 'queued';
     public const STATUS_COMPLETE = 'complete';
     public const STATUS_FAILED = 'failed';
 
@@ -98,13 +99,13 @@ class MessageFlowOut extends Model
     }
 
     /**
-     * Check if the message has not been added to the queue yet.
+     * Check if the message has been added to the queue yet.
      *
      * @return boolean
      */
     public function isSent(): bool
     {
-        return $this->status === static::STATUS_COMPLETE;
+        return $this->status === static::STATUS_QUEUED || $this->status === static::STATUS_COMPLETE;
     }
 
     /**
@@ -127,6 +128,11 @@ class MessageFlowOut extends Model
     public function scopeToSend($query)
     {
         $query->whereIn('status', [static::STATUS_NEW, static::STATUS_FAILED]);
+    }
+
+    public function scopeIsQueued($query)
+    {
+        $query->where('status', '=', static::STATUS_QUEUED);
     }
 
     /**

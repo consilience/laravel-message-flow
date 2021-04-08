@@ -6,7 +6,9 @@
     - [Background](#background)
     - [Messages](#messages)
     - [Reliability](#reliability)
+        - [Outbound Message Status](#outbound-message-status)
     - [Flexibility](#flexibility)
+        - [Outbound Routing](#outbound-routing)
     - [Configuration](#configuration)
 - [Installation](#installation)
     - [Requirements](#requirements)
@@ -17,6 +19,7 @@
 - [Artisan Commands](#artisan-commands)
     - [Create Message](#create-message)
     - [List Messages](#list-messages)
+- [Testing](#testing)
 - [TODO](#todo)
 
 <!-- /TOC -->
@@ -36,18 +39,25 @@ the messages between multiple applications.
 
 The use-case for this package is to replace a number of webhooks between
 a suite of applications. The webhooks were becoming difficult to set
-up, maintain and monitor. This package aims to tackle those problems.
+up, maintain and monitor. This package aims to tackle those problems.é
 
 ## Messages
 
 A message is any data or object that can be serialised into JSON in a
-portable way. A portable way means it can be deserialised without
+portable way. Being portable means the object can be deserialised without
 reference to any models or objects in the source application.
 It's just data that can stand on its own.
 
 Every message is given a UUID that gets carried across with it,
 and is given a name that can be used for routing to specific queues
 when sending, or routing to specific jobs when receiving.
+
+In its most basic implementation, this package will take a message saved
+to a model on one application, and move it to a model on
+another application.
+It does this using laravel queues as its communication channel.
+
+![Basic Message](docs/basic-message.svg)
 
 ## Reliability
 
@@ -56,6 +66,32 @@ Once dispatched, responsibility is handed over to the queuing broker
 and it is considered sent. There is no end-to-end confirmation of receipt,
 though that can be easily achieved with a simple message
 in the opposite direction.
+
+### Outbound Message Status
+
+This package will be observing the `MessageFlowOut` model.
+When an instance status reaches the `new` status, it will be dispatched to
+the queue it has been routed to. If it successfully dispatched, then its
+status will move to `processed`. If it could not be dispatched to the
+queue, then its status will be `failed`.
+
+You may use additional statuses for other states in your process, and they
+will be ignored.
+
+Optionally, a `processed` outbound `MessageFlowOut` model instance can be
+automatically deleted. A `failed` instance will never be deleted, so it
+can be retried. The approach taken here is that once a message is safely
+accepted by the queue, then it is no longer the responsilbility of the
+sending model.
+
+However, if it is important to know that the message was safely received
+and processed by the receiver, then a response channel can be set up
+to confirm this, simply by configuring the sender and receiver applications
+to send messages in the opposite direction. Different message names would
+be used to distinguish the different content and purpose of the original
+message and its acknowledgement response.
+
+![Basic Message](docs/ack-responses.svg)
 
 ## Flexibility
 
@@ -72,6 +108,10 @@ routing rules, or maybe "tee" the messages into multiple destinations
 (assuming that is not something you can do in the queue broker already).
 You may simply want to put in additional logging.
 The flexibility is there.
+
+### Outbound Routing
+
+*TODO: describe how message names route to queues and connections.*
 
 ## Configuration
 
@@ -254,6 +294,13 @@ messages:
 
     php artisan queue:work message-flow-queue-connection --queue=message-flow
 
+Note: for each shared queue, just one application will be subscribed to it
+and handling messages pushed onto it.
+Conversely, any number of applications can push messages onto that queue.
+If there are multiple applications sending messages to each other, it helps
+if each shared queue is named with reference to the application subscribed
+to it.
+
 ## Sending an example message
 
 You can send a message simply by creating a new MessageFlowOut model from your sender application:
@@ -383,9 +430,26 @@ to kick the custom observers into action.
 With the `-v` option, the payload will be included in the listing.
 Some payloads may be large.
 
+# Testing
+
+Unit tests can be run with `docker-compose` using the
+[excellent instructions here](https://thephp.website/en/issue/php-docker-quick-setup/)
+
+The tests are set up to run under PHP 7.4.
+To execute the unit tests run the `phpunit` service:
+
+    docker-compose run phpunit
+
+Additional options can be supplied if needed.
+The `composer` service provides support for composer running under the same PHP version:
+
+    docker-compose run composer list
+    docker-compose run composer update
+
 # TODO
 
-* Overview of the states
-* Names and routing (advanced)
-* Outbound pipeline (advanced)
-* Tests
+* Overview of the states.
+* Names and routing (advanced config).
+* Outbound pipeline (advanced config).
+* Tests to complete.
+* Support testing against multiple framwework versions (7 and 8) and PHP versions.
