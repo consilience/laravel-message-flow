@@ -8,27 +8,27 @@ services:
       - .:/app
     restart: "no"
   php:
-    image: php:7.4-cli
+    image: php:8-cli
     restart: "no"
     volumes:
       - .:/app
     working_dir: /app
   shell:
-    image: php:7.4-cli
+    image: php:8-cli
     restart: "no"
     volumes:
       - .:/app
     working_dir: /app
     entrypoint: /bin/bash
   phpunit:
-    image: php:7.4-cli
+    image: php:8-cli
     restart: "no"
     volumes:
       - .:/app
     working_dir: /app
     entrypoint: vendor/bin/phpunit
   # fpm:
-  #   image: php:7.4-fpm
+  #   image: php:8-fpm
   #   restart: always
   #   volumes:
   #     - .:/app
