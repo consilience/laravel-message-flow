@@ -4,6 +4,7 @@ namespace Consilience\Laravel\MessageFlow\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 
 class MessageFlowIn extends Model
 {
@@ -119,5 +120,18 @@ class MessageFlowIn extends Model
         $this->status = static::STATUS_FAILED;
 
         return $this;
+    }
+
+    /**
+     * Convenience method to get a value from the payload, based
+     * on its "dot" path.
+     *
+     * @param string $path
+     * @param mixed $default
+     * @return mixed
+     */
+    public function getPayloadPath(string $path, $default = null)
+    {
+        return Arr::get($this->payload, $path, $default);
     }
 }

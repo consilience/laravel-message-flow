@@ -24,6 +24,8 @@ class ListMessages extends Command
         {--status=* : The statuses to view}
         {--process : Process any records taht are still waiting to be handled}
         {--uuid=* : Match a single message}
+        {--limit=20 : The maximum number of messages to match}
+        {--page=1 : The page number to return, in ascending order}
     ';
 
     /**
@@ -54,6 +56,10 @@ class ListMessages extends Command
         $statuses = $this->option('status');
         $process = $this->option('process');
         $uuids = $this->option('uuid');
+        $limit = (int)$this->option('limit') ?? 20;
+        $page = (int)$this->option('page') ?? 1;
+
+        $offset = ($page - 1) * $limit;
 
         // Validate direction, accepting any abbreviation.
 
@@ -95,15 +101,20 @@ class ListMessages extends Command
             $columns[] = DB::raw("'---' as processed");
         }
 
-        $rows = $query->select($columns)
+        $query = $query->select($columns)
             ->orderBy('created_at')
             ->when($statuses, function ($query, $statuses) {
                 return $query->whereIn('status', $statuses);
             })
             ->when($uuids, function ($query, $uuids) {
                 return $query->whereIn('uuid', $uuids);
-            })
-            ->get()
+            });
+
+        $total = $query->count();
+
+        $query = $query->limit($limit)->offset($offset);
+
+        $rows = $query->get()
             ->map(function ($item) {
                 if ($item->payload !== null) {
                     $item->payload = json_encode($item->payload, JSON_PRETTY_PRINT);
@@ -112,16 +123,37 @@ class ListMessages extends Command
                 return $item;
             })
             ->map(function ($item) use ($process) {
-                if ($process && $item instanceof MessageFlowOut && $item->status === MessageFlowOut::STATUS_NEW) {
+                if ($process && $item instanceof MessageFlowOut && $item->isNew()) {
                     dispatch(new RoutingPipeline($item));
 
                     $item->processed = 'dispatched';
+                }
+
+                if ($process && $item instanceof MessageFlowIn && $item->isNew()) {
+                    // Fire the event to make it look like the inbound "new" message has just arrived.
+                    // This is not documented for the framework, so may change without notice, but
+                    // has not changed in a long, long time.
+
+                    event('eloquent.created: ' . MessageFlowIn::class, MessageFlowIn::find($item->uuid));
+
+                    $item->processed = 'event fired';
                 }
 
                 return $item;
             });
 
         $this->table($headers, $rows);
+
+        if ($total > $offset) {
+            $this->info(sprintf(
+                'Records %d to %d of %d',
+                $offset + 1,
+                min($offset + $limit, $total),
+                $total
+            ));
+        } else {
+            $this->info(sprintf('Total records %d', $total));
+        }
 
         return 0;
     }

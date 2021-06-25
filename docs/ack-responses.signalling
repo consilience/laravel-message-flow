@@ -1,0 +1,48 @@
+#
+# Edit and generate output using `msc generator`
+#
+
+#msc=modern_blue;
+background.color = "253,253,253";
+
+A: Application A\nSender {
+    #AA: App Logic;
+    AI: In Model;
+    AO: Out Model;
+    QtoA: Shared Queue;
+};
+B: Application B\nReceiver {
+    QtoB: Shared Queue;
+    BI: In Model;
+    BO: Out Model;
+    BA: Jobs;
+};
+
+=>AO: Create Msg;
+activate AO;
+AO=>QtoB: Msg;
+activate QtoB;
+QtoB=>BI: Msg;
+deactivate QtoB;
+activate BI;
+BI=>BO: Create MsgAck;
+activate BO;
+
+box BA..BA: Msg Handler {
+    BI=>BA: Msg;
+    box BA--BA: Process Msg;
+    BI<-BA: Delete Msg;
+    deactivate BI;
+};
+
+BO=>QtoA: MsgAck;
+activate QtoA;
+deactivate BO;
+QtoA=>AI: MsgAck;
+deactivate QtoA;
+activate AI;
+AI->AO: Delete Msg;
+deactivate AI;
+deactivate AO;
+
+

@@ -12,6 +12,9 @@ use Consilience\Laravel\MessageFlow\Contracts\RoutingPipe;
 
 class RouteFromConfig implements RoutingPipe
 {
+    /**
+     * @inheritDoc
+     */
     public function handle(MessageFlowOut $messageFlowOut, Closure $next)
     {
         if ($messageFlowOut->queue_connection !== null && $messageFlowOut->queue_name !== null) {
