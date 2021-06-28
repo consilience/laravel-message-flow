@@ -31,37 +31,7 @@ class MessageFlowServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
-
-        // if ($this->app->runningInConsole()) {
-        //     // Laravel does not autoload migration classes, so we must
-        //     // do so here to check if they exist, in order to prevent
-        //     // migrations being published multiple times. We don't know
-        //     // what timestamp they were given, so must search for the
-        //     // files by wildcard.
-
-        //     collect([
-        //         'migrations/*_create_message_flow_in_table.php',
-        //         'migrations/*_create_message_flow_out_table.php',
-        //     ])
-        //     ->flapMap(function ($item) {
-        //         return glob(database_path($item));
-        //     })
-        //     ->each(function ($item) {
-        //         include_once $item;
-        //     });
-
-        //     // Publish the migrations.
-
-        //     if (! class_exists(CreateMessageFlowInTable::class)) {
-        //         $timestamp = date('Y_m_d_His', time());
-
-        //         $this->publishes([
-        //             __DIR__ . '/../database/migrations/create_message_flow_in_table.php.stub' => database_path('migrations/' . $timestamp . '_create_message_flow_in_table.php'),
-        //             __DIR__ . '/../database/migrations/create_message_flow_out_table.php.stub' => database_path('migrations/' . $timestamp . '_create_message_flow_out_table.php'),
-        //         ], 'migrations');
-        //     }
-        // }
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
         $this->publishes([
             __DIR__.'/../database/migrations/' => database_path('migrations')
