@@ -1,3 +1,6 @@
+
+[![Latest Stable Version](http://poser.pugx.org/consilience/laravel-message-flow/v)](https://packagist.org/packages/consilience/laravel-message-flow) [![Total Downloads](http://poser.pugx.org/consilience/laravel-message-flow/downloads)](https://packagist.org/packages/consilience/laravel-message-flow) [![Latest Unstable Version](http://poser.pugx.org/consilience/laravel-message-flow/v/unstable)](https://packagist.org/packages/consilience/laravel-message-flow) [![License](http://poser.pugx.org/consilience/laravel-message-flow/license)](https://packagist.org/packages/consilience/laravel-message-flow)
+
 # Laravel Message Flow
 
 <!-- TOC -->
