@@ -336,7 +336,7 @@ class MessageFlowObserver
     /**
      * Handle the MessageFlowIn "created" event.
      *
-     * @param  \App\Models\Consilience\Laravel\MessageFlow\Models\MessageFlowIn  $messageFlowIn
+     * @param  \Consilience\Laravel\MessageFlow\Models\MessageFlowIn $messageFlowIn
      * @return void
      */
     public function created(MessageFlowIn $messageFlowIn)
