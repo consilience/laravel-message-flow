@@ -2,6 +2,10 @@
 
 namespace Consilience\Laravel\MessageFlow\Models;
 
+/**
+ * Eloquent model for a message that has arrived from a remote app.
+ */
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -14,7 +18,8 @@ class MessageFlowIn extends Model
 
     /**
      * The default supported states for each message in the cache.
-     * Other arbitrary states can be added.
+     * Other arbitrary custom states can be used too, with the application
+     * giving meaning to them.
      */
     public const STATUS_NEW = 'new';
     public const STATUS_COMPLETE = 'complete';
@@ -38,7 +43,8 @@ class MessageFlowIn extends Model
 
     /**
      * Just guard the auto-generated properties.
-     * Note: the UUID is sent to us.
+     * Note: the UUID is sent to us, since it takes on the UUID of
+     * the original source message, so it's not guarded.
      *
      * @var array
      */

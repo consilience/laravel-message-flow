@@ -7,6 +7,7 @@ namespace Consilience\Laravel\MessageFlow\Observers;
  * model, and dispatches messages to acknowledge the inbound message.
  */
 
+use Consilience\Laravel\MessageFlow\Messages\AckMessage;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowIn;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 
@@ -15,7 +16,7 @@ class AckResponseObserver
     /**
      * Handle the MessageFlowIn "created" event.
      *
-     * @param  \App\Models\MessageFlowIn  $messageFlowIn
+     * @param  MessageFlowIn  $messageFlowIn
      * @return void
      */
     public function created(MessageFlowIn $messageFlowIn)
@@ -30,13 +31,12 @@ class AckResponseObserver
     /**
      * Handle the MessageFlowIn "updated" event.
      *
-     * @param  \App\Models\MessageFlowIn  $messageFlowIn
+     * @param  MessageFlowIn  $messageFlowIn
      * @return void
      */
     public function updated(MessageFlowIn $messageFlowIn)
     {
-        if ($messageFlowIn->status !== $messageFlowIn->getOriginal('status')
-            && $messageFlowIn->isNew()) {
+        if ($messageFlowIn->isDirty('status') && $messageFlowIn->isNew()) {
                 // Becomes "new" status from ny other status.
 
                 $this->handle($messageFlowIn);

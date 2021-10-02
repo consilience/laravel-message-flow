@@ -15,6 +15,7 @@ namespace Consilience\Laravel\MessageFlow\Observers;
  * The inbound ack message is deleted once it has been processed.
  */
 
+use Consilience\Laravel\MessageFlow\Jobs\RoutingPipeline;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowIn;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 
@@ -23,7 +24,7 @@ class NewInboundAckObserver
     /**
      * Handle the MessageFlowIn "created" event.
      *
-     * @param  \App\Models\MessageFlowIn  $messageFlowIn
+     * @param  MessageFlowIn  $messageFlowIn
      * @return void
      */
     public function created(MessageFlowIn $messageFlowIn)
@@ -38,7 +39,7 @@ class NewInboundAckObserver
     /**
      * Handle the MessageFlowIn "updated" event.
      *
-     * @param  \App\Models\MessageFlowIn  $messageFlowIn
+     * @param  MessageFlowIn  $messageFlowIn
      * @return void
      */
     public function updated(MessageFlowIn $messageFlowIn)
@@ -79,7 +80,7 @@ class NewInboundAckObserver
             // Dispatch the routing pipeline to complete any stages for the
             // sent message.
 
-            dispatch(new RoutingPipeline($originalMessage);
+            dispatch(new RoutingPipeline($originalMessage));
         }
     }
 }

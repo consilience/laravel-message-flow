@@ -2,6 +2,11 @@
 
 namespace Consilience\Laravel\MessageFlow\Messages;
 
+/**
+ * A message to send back to the source of an inbound message, so indicate
+ * the original message was received.
+ */
+
 use JsonSerializable;
 
 class AckMessage implements JsonSerializable

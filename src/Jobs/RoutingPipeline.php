@@ -8,15 +8,11 @@ namespace Consilience\Laravel\MessageFlow\Jobs;
 
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\Queue;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Consilience\Laravel\MessageFlow\Pipes\DispatchSendMessage;
-use Consilience\Laravel\MessageFlow\Pipes\RouteFromConfig;
 use Illuminate\Pipeline\Pipeline;
 
 class RoutingPipeline implements ShouldQueue
@@ -24,9 +20,9 @@ class RoutingPipeline implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
-     * Where teh prepared message will be stored ready to go.
+     * Where the prepared message will be stored ready to go.
      *
-     * @var mMssageFlowOut
+     * @var messageFlowOut
      */
     protected $messageFlowOut;
 
@@ -51,10 +47,6 @@ class RoutingPipeline implements ShouldQueue
         // is ready to be sent to the queue.
         // Every pipe must save its changes if it has made any.
 
-        Log::info('Running routing pipeline', [
-            'messageFlowOutUuid' => $this->messageFlowOut->uuid,
-        ]);
-
         $pipes = config('message-flow.out.routing-pipeline', []);
 
         app(Pipeline::class)
@@ -62,15 +54,10 @@ class RoutingPipeline implements ShouldQueue
             ->through($pipes)
             ->then(function ($messageFlowOut) {
                 if ($messageFlowOut->exists) {
-                    // Save changes only if a pipe has not deleted it.
+                    // Save changes to the message only if a pipe has not deleted it.
+
                     $messageFlowOut->save();
                 }
-
-                Log::debug('Routing pipeline complete for MessageFlowOut', [
-                    'uuid' => $messageFlowOut->uuid,
-                    'status' => $messageFlowOut->status,
-                    'isDeleted' => ! $messageFlowOut->exists,
-                ]);
             });
     }
 }

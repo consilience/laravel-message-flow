@@ -10,7 +10,6 @@ use Closure;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Consilience\Laravel\MessageFlow\Contracts\RoutingPipe;
 use Consilience\Laravel\MessageFlow\Jobs\ReceiveMessage;
-use Consilience\Laravel\MessageFlow\Jobs\SendMessage;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -46,7 +45,8 @@ class QueueMessage implements RoutingPipe
         }
 
         // Here force the job to dispatch immediately by destroying it.
-        // If there are any problems due to config, then mark it as a fail.
+        // If there are any problems due to config, then this is where
+        // we will catch it and can mark it as a fail.
 
         try {
             unset($pendingJob);

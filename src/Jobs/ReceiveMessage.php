@@ -9,12 +9,9 @@ namespace Consilience\Laravel\MessageFlow\Jobs;
 
 use Consilience\Laravel\MessageFlow\Models\MessageFlowIn;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\Queue;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 class ReceiveMessage implements ShouldQueue
@@ -44,7 +41,7 @@ class ReceiveMessage implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * Note: all parameters are deserialised, but none from models.
+     * Note: all parameters are deserialized, but none from models.
      * This is necessary as the receiving application will not have
      * the models of the sending application.
      *

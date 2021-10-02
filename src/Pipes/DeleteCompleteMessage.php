@@ -9,8 +9,6 @@ namespace Consilience\Laravel\MessageFlow\Pipes;
 use Closure;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Consilience\Laravel\MessageFlow\Contracts\RoutingPipe;
-use Consilience\Laravel\MessageFlow\Jobs\ReceiveMessage;
-use Consilience\Laravel\MessageFlow\Jobs\SendMessage;
 
 class DeleteCompleteMessage implements RoutingPipe
 {

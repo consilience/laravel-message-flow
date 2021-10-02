@@ -1,9 +1,11 @@
 <?php
 
-use Consilience\Laravel\MessageFlow\Pipes\RouteFromConfig;
 use Consilience\Laravel\MessageFlow\Pipes\QueueMessage;
+use Consilience\Laravel\MessageFlow\Pipes\RouteFromConfig;
 use Consilience\Laravel\MessageFlow\Pipes\CompleteQueuedMessage;
 use Consilience\Laravel\MessageFlow\Pipes\DeleteCompleteMessage;
+use Consilience\Laravel\MessageFlow\Pipes\LogStartRoutingPipeline;
+use Consilience\Laravel\MessageFlow\Pipes\LogFinishRoutingPipeline;
 
 return [
 
@@ -12,11 +14,20 @@ return [
     'out' => [
         // The pipeline to process a new outbound message.
 
+        // Uncomment DeleteCompleteMessage to delete the outbound message
+        // once it is confirmed written to the outbound queue. Don't do this
+        // if you want to use the return acknowledgement message instead.
+
+        // The LogStartRoutingPipeline and LogFinishRoutingPipeline are handy
+        // for debugging.
+
         'routing-pipeline' => [
+            // LogStartRoutingPipeline::class,
             RouteFromConfig::class,
             QueueMessage::class,
             CompleteQueuedMessage::class,
-            //DeleteCompleteMessage::class,
+            // DeleteCompleteMessage::class,
+            // LogFinishRoutingPipeline::class,
         ],
 
         // Mappings message names to queues.

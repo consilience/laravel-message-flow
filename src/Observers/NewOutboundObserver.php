@@ -19,7 +19,7 @@ class NewOutboundObserver
     /**
      * Handle the MessageFlowOut "created" event.
      *
-     * @param  \App\Models\MessageFlowOut  $messageFlowOut
+     * @param  MessageFlowOut  $messageFlowOut
      * @return void
      */
     public function created(MessageFlowOut $messageFlowOut)
@@ -34,15 +34,14 @@ class NewOutboundObserver
     /**
      * Handle the MessageFlowOut "updated" event.
      *
-     * @param  \App\Models\MessageFlowOut  $messageFlowOut
+     * @param  MessageFlowOut  $messageFlowOut
      * @return void
      */
     public function updated(MessageFlowOut $messageFlowOut)
     {
         // FIXME: Don't dispatch a job if no routing pipeline is defined in config.
 
-        if ($messageFlowOut->status !== $messageFlowOut->getOriginal('status')
-            && $messageFlowOut->isNew()) {
+        if ($messageFlowOut->isDirty('status') && $messageFlowOut->isNew()) {
                 // Becomes "new" status from ny other status.
 
                 dispatch(new RoutingPipeline($messageFlowOut));

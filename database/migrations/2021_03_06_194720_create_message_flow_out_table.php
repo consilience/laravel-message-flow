@@ -17,13 +17,13 @@ class CreateMessageFlowOutTable extends Migration
             $table->uuid('uuid')->primary();
             $table->timestamps();
 
-            $table->string('status', 20)->default('new');
-            $table->string('name', 60)->default('default');
+            $table->string('status', 20)->default('new')->comment('The status used to trigger actions.');
+            $table->string('name', 60)->default('default')->comment('A name used for routing.');
 
-            $table->string('queue_connection', 100)->nullable();
-            $table->string('queue_name', 100)->nullable();
+            $table->string('queue_connection', 100)->nullable()->comment('The queue connection to send the message on.');
+            $table->string('queue_name', 100)->nullable()->comment('The queue name to send the message on.');
 
-            $table->json('payload');
+            $table->json('payload')->comment('The JSON message payload.');
         });
     }
 
