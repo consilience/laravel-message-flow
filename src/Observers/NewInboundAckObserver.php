@@ -3,7 +3,7 @@
 namespace Consilience\Laravel\MessageFlow\Observers;
 
 /**
- * Handle an inbound ack message, returned buy the receiver.
+ * Handle an inbound ack message, returned by the receiver.
  *
  * The ack message is tied up to the original outbound message,
  * which is marked as `complete`.
@@ -21,13 +21,7 @@ use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 
 class NewInboundAckObserver
 {
-    /**
-     * Handle the MessageFlowIn "created" event.
-     *
-     * @param  MessageFlowIn  $messageFlowIn
-     * @return void
-     */
-    public function created(MessageFlowIn $messageFlowIn)
+    public function created(MessageFlowIn $messageFlowIn): void
     {
         if ($messageFlowIn->isNew()) {
             // Landed with the "new" status.
@@ -36,27 +30,17 @@ class NewInboundAckObserver
         }
     }
 
-    /**
-     * Handle the MessageFlowIn "updated" event.
-     *
-     * @param  MessageFlowIn  $messageFlowIn
-     * @return void
-     */
-    public function updated(MessageFlowIn $messageFlowIn)
+    public function updated(MessageFlowIn $messageFlowIn): void
     {
         if ($messageFlowIn->status !== $messageFlowIn->getOriginal('status')
             && $messageFlowIn->isNew()) {
-            // Becomes "new" status from ny other status.
+            // Becomes "new" status from any other status.
 
             $this->handle($messageFlowIn);
         }
     }
 
-    /**
-     * @param MessageFlowIn $messageFlowIn
-     * @return void
-     */
-    protected function handle(MessageFlowIn $messageFlowIn)
+    protected function handle(MessageFlowIn $messageFlowIn): void
     {
         // TODO: Only match a known ack message name, so we know this
         // is an expected ack message.

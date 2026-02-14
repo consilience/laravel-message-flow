@@ -13,13 +13,7 @@ use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 
 class AckResponseObserver
 {
-    /**
-     * Handle the MessageFlowIn "created" event.
-     *
-     * @param  MessageFlowIn  $messageFlowIn
-     * @return void
-     */
-    public function created(MessageFlowIn $messageFlowIn)
+    public function created(MessageFlowIn $messageFlowIn): void
     {
         if ($messageFlowIn->isNew()) {
             // Landed with the "new" status.
@@ -28,26 +22,16 @@ class AckResponseObserver
         }
     }
 
-    /**
-     * Handle the MessageFlowIn "updated" event.
-     *
-     * @param  MessageFlowIn  $messageFlowIn
-     * @return void
-     */
-    public function updated(MessageFlowIn $messageFlowIn)
+    public function updated(MessageFlowIn $messageFlowIn): void
     {
         if ($messageFlowIn->isDirty('status') && $messageFlowIn->isNew()) {
-                // Becomes "new" status from ny other status.
+            // Becomes "new" status from any other status.
 
-                $this->handle($messageFlowIn);
-            }
+            $this->handle($messageFlowIn);
+        }
     }
 
-    /**
-     * @param MessageFlowIn $messageFlowIn
-     * @return void
-     */
-    protected function handle(MessageFlowIn $messageFlowIn)
+    protected function handle(MessageFlowIn $messageFlowIn): void
     {
         // TODO: Check config - does this message name need an ack?
         // TODO: Check config - what is the ack message name?

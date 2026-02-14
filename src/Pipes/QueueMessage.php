@@ -7,18 +7,15 @@ namespace Consilience\Laravel\MessageFlow\Pipes;
  */
 
 use Closure;
-use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Consilience\Laravel\MessageFlow\Contracts\RoutingPipe;
 use Consilience\Laravel\MessageFlow\Jobs\ReceiveMessage;
+use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class QueueMessage implements RoutingPipe
 {
-    /**
-     * @inheritDoc
-     */
-    public function handle(MessageFlowOut $messageFlowOut, Closure $next)
+    public function handle(MessageFlowOut $messageFlowOut, Closure $next): mixed
     {
         // Skip if not in a state for dispatching to the queue.
 
@@ -62,7 +59,7 @@ class QueueMessage implements RoutingPipe
                 'errorMessage' => $exception->getMessage(),
             ]);
 
-            throw($exception);
+            throw $exception;
         }
 
         $messageFlowOut->status = MessageFlowOut::STATUS_COMPLETE;

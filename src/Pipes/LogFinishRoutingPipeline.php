@@ -7,16 +7,13 @@ namespace Consilience\Laravel\MessageFlow\Pipes;
  */
 
 use Closure;
-use Illuminate\Support\Facades\Log;
 use Consilience\Laravel\MessageFlow\Contracts\RoutingPipe;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
+use Illuminate\Support\Facades\Log;
 
 class LogFinishRoutingPipeline implements RoutingPipe
 {
-    /**
-     * @inheritDoc
-     */
-    public function handle(MessageFlowOut $messageFlowOut, Closure $next)
+    public function handle(MessageFlowOut $messageFlowOut, Closure $next): mixed
     {
         Log::debug('Routing pipeline complete for MessageFlowOut', [
             'uuid' => $messageFlowOut->uuid,
@@ -24,6 +21,6 @@ class LogFinishRoutingPipeline implements RoutingPipe
             'isDeleted' => ! $messageFlowOut->exists,
         ]);
 
-        return  $next($messageFlowOut);
+        return $next($messageFlowOut);
     }
 }

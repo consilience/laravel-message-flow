@@ -4,34 +4,27 @@ namespace Consilience\Laravel\MessageFlow\Tests;
 
 use Consilience\Laravel\MessageFlow\MessageFlowServiceProvider;
 
-/** @package Consilience\Laravel\MessageFlow\Tests */
 class TestCase extends \Orchestra\Testbench\TestCase
 {
-  public function setUp(): void
-  {
-    parent::setUp();
-    // additional setup
-  }
+    protected function setUp(): void
+    {
+        parent::setUp();
+    }
 
-  protected function getPackageProviders($app)
-  {
-    return [
-      MessageFlowServiceProvider::class,
-    ];
-  }
+    protected function getPackageProviders($app): array
+    {
+        return [
+            MessageFlowServiceProvider::class,
+        ];
+    }
 
-  protected function getEnvironmentSetUp($app)
-  {
-    // perform environment setup
-  }
+    protected function getEnvironmentSetUp($app): void
+    {
+        // perform environment setup
+    }
 
-  /**
-   * Define database migrations.
-   *
-   * @return void
-   */
-  protected function defineDatabaseMigrations()
-  {
-    $this->loadLaravelMigrations();
-  }
+    protected function defineDatabaseMigrations(): void
+    {
+        $this->loadLaravelMigrations();
+    }
 }
