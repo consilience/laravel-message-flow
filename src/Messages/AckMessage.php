@@ -11,16 +11,12 @@ use JsonSerializable;
 
 class AckMessage implements JsonSerializable
 {
-    protected $originalMessageUuid;
-    protected $originalMessageName;
+    public function __construct(
+        protected string $originalMessageUuid,
+        protected string $originalMessageName,
+    ) {}
 
-    public function __construct(string $originalMessageUuid, string $originalMessageName)
-    {
-        $this->originalMessageUuid = $originalMessageUuid;
-        $this->originalMessageName = $originalMessageName;
-    }
-
-    public function toArray()
+    public function toArray(): array
     {
         return [
             'originalMessageUuid' => $this->originalMessageUuid,
@@ -28,17 +24,17 @@ class AckMessage implements JsonSerializable
         ];
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): mixed
     {
-        return $this->toArray()
+        return $this->toArray();
     }
 
-    public function getOriginalMessageUuid()
+    public function getOriginalMessageUuid(): string
     {
         return $this->originalMessageUuid;
     }
 
-    public function getOriginalMessageName()
+    public function getOriginalMessageName(): string
     {
         return $this->originalMessageName;
     }

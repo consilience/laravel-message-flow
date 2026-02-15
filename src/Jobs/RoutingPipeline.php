@@ -3,45 +3,26 @@
 namespace Consilience\Laravel\MessageFlow\Jobs;
 
 /**
- * Send the message throuygh the routing pipeline.
+ * Send the message through the routing pipeline.
  */
 
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Pipeline\Pipeline;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Pipeline\Pipeline;
 
 class RoutingPipeline implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Where the prepared message will be stored ready to go.
-     *
-     * @var messageFlowOut
-     */
-    protected $messageFlowOut;
+    public function __construct(
+        protected MessageFlowOut $messageFlowOut,
+    ) {}
 
-    /**
-     * Create a new job instance.
-     *
-     * @return void
-     */
-    public function __construct(MessageFlowOut $messageFlowOut)
-    {
-        $this->messageFlowOut = $messageFlowOut;
-    }
-
-    /**
-     * Execute the job.
-     *
-     * @return void
-     */
-    public function handle()
+    public function handle(): void
     {
         // The routing pipeline, for preparing each message before it
         // is ready to be sent to the queue.

@@ -8,15 +8,12 @@ namespace Consilience\Laravel\MessageFlow\Pipes;
  */
 
 use Closure;
-use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Consilience\Laravel\MessageFlow\Contracts\RoutingPipe;
+use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 
 class CompleteQueuedMessage implements RoutingPipe
 {
-    /**
-     * @inheritDoc
-     */
-    public function handle(MessageFlowOut $messageFlowOut, Closure $next)
+    public function handle(MessageFlowOut $messageFlowOut, Closure $next): mixed
     {
         // FIXME:check config to see which which message names need this action.
         // Messages requiring an ack should remained in the `queued` state.
@@ -28,6 +25,6 @@ class CompleteQueuedMessage implements RoutingPipe
             $messageFlowOut->save();
         }
 
-        return  $next($messageFlowOut);
+        return $next($messageFlowOut);
     }
 }

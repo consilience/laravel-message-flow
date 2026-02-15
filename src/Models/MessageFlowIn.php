@@ -25,18 +25,10 @@ class MessageFlowIn extends Model
     public const STATUS_COMPLETE = 'complete';
     public const STATUS_FAILED = 'failed';
 
-    /**
-     * Default values on creation.
-     *
-     * @var array
-     */
     protected $attributes = [
         'status' => self::STATUS_NEW,
     ];
 
-    /**
-     * @var array
-     */
     protected $casts = [
         'payload' => 'json',
     ];
@@ -45,83 +37,45 @@ class MessageFlowIn extends Model
      * Just guard the auto-generated properties.
      * Note: the UUID is sent to us, since it takes on the UUID of
      * the original source message, so it's not guarded.
-     *
-     * @var array
      */
     protected $guarded = [
         'created_at',
         'updated_at',
     ];
 
-    /**
-     * Indicates the primary key is not an incrementing integer.
-     *
-     * @return bool
-     */
-    public function getIncrementing()
+    public function getIncrementing(): bool
     {
         return false;
     }
 
-    /**
-     * Returns the primary key type.
-     *
-     * @return string
-     */
-    public function getKeyType()
+    public function getKeyType(): string
     {
         return 'string';
     }
 
-    /**
-     * Name the primary key appropriately.
-     *
-     * @return string
-     */
-    public function getKeyName()
+    public function getKeyName(): string
     {
         return 'uuid';
     }
 
-    /**
-     * Set the payload as a JSON string.
-     *
-     * @param string $value
-     * @return void
-     */
-    public function setJsonPayloadAttribute(string $value)
+    public function setJsonPayloadAttribute(string $value): void
     {
         $this->attributes['payload'] = $value;
     }
 
-    /**
-     * Check if the record is new. Used by observer to confirm ready to process.
-     *
-     * @return boolean
-     */
     public function isNew(): bool
     {
         return $this->status === static::STATUS_NEW;
     }
 
-    /**
-     * Mark the message as processed.
-     *
-     * @return self
-     */
-    public function setComplete()
+    public function setComplete(): self
     {
         $this->status = static::STATUS_COMPLETE;
 
         return $this;
     }
 
-    /**
-     * Mark the message as failed to processed.
-     *
-     * @return self
-     */
-    public function setFailed()
+    public function setFailed(): self
     {
         $this->status = static::STATUS_FAILED;
 
@@ -131,12 +85,8 @@ class MessageFlowIn extends Model
     /**
      * Convenience method to get a value from the payload, based
      * on its "dot" path.
-     *
-     * @param string $path
-     * @param mixed $default
-     * @return mixed
      */
-    public function getPayloadPath(string $path, $default = null)
+    public function getPayloadPath(string $path, mixed $default = null): mixed
     {
         return Arr::get($this->payload, $path, $default);
     }

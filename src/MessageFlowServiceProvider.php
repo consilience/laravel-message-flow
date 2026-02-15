@@ -4,32 +4,21 @@ namespace Consilience\Laravel\MessageFlow;
 
 use Consilience\Laravel\MessageFlow\Console\Commands\CreateMessage;
 use Consilience\Laravel\MessageFlow\Console\Commands\ListMessages;
-use Illuminate\Support\ServiceProvider;
+use Consilience\Laravel\MessageFlow\Console\Commands\PurgeMessages;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Consilience\Laravel\MessageFlow\Observers\NewOutboundObserver;
-use CreateMessageFlowInTable;
-use Throwable;
+use Illuminate\Support\ServiceProvider;
 
 class MessageFlowServiceProvider extends ServiceProvider
 {
-    /**
-     * Register services.
-     *
-     * @return void
-     */
-    public function register()
+    public function register(): void
     {
         $this->mergeConfigFrom(
             __DIR__.'/../config/message-flow.php', 'message-flow'
         );
     }
 
-    /**
-     * Bootstrap services.
-     *
-     * @return void
-     */
-    public function boot()
+    public function boot(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
@@ -50,6 +39,7 @@ class MessageFlowServiceProvider extends ServiceProvider
             $this->commands([
                 CreateMessage::class,
                 ListMessages::class,
+                PurgeMessages::class,
             ]);
         }
     }

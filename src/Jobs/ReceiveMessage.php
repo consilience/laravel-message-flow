@@ -19,51 +19,18 @@ class ReceiveMessage implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable;
 
     /**
-     * The structured message that has been sent, as a JSON string.
-     *
-     * @var string
-     */
-    protected $jsonPayload;
-
-    /**
-     * Matches the UUID on the sending application.
-     *
-     * @var string
-     */
-    protected $uuid;
-
-    /**
-     * Name to route the message as needed.
-     *
-     * @var string
-     */
-    protected $name;
-
-    /**
      * Create a new job instance.
      * Note: all parameters are deserialized, but none from models.
      * This is necessary as the receiving application will not have
      * the models of the sending application.
-     *
-     * @param string $payload JSON format
-     * @param string $uuid
-     * @param string|null $name
-     *
-     * @return void
      */
-    public function __construct(string $jsonPayload, string $uuid, ?string $name = null)
-    {
-        $this->jsonPayload = $jsonPayload;
-        $this->uuid = $uuid;
-        $this->name = $name;
-    }
+    public function __construct(
+        protected string $jsonPayload,
+        protected string $uuid,
+        protected ?string $name = null,
+    ) {}
 
-    /**
-     * Execute the job.
-     *
-     * @return void
-     */
-    public function handle()
+    public function handle(): void
     {
         // Store the payload through the model.
 
@@ -81,7 +48,6 @@ class ReceiveMessage implements ShouldQueue
 
         $messageCacheIn = new MessageFlowIn([
             'uuid' => $this->uuid,
-            //'jsonPayload' => $this->jsonPayload,
         ]);
 
         $messageCacheIn->jsonPayload = $this->jsonPayload;

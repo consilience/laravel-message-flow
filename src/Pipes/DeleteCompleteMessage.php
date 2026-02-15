@@ -7,20 +7,17 @@ namespace Consilience\Laravel\MessageFlow\Pipes;
  */
 
 use Closure;
-use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Consilience\Laravel\MessageFlow\Contracts\RoutingPipe;
+use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 
 class DeleteCompleteMessage implements RoutingPipe
 {
-    /**
-     * @inheritDoc
-     */
-    public function handle(MessageFlowOut $messageFlowOut, Closure $next)
+    public function handle(MessageFlowOut $messageFlowOut, Closure $next): mixed
     {
         if ($messageFlowOut->status === MessageFlowOut::STATUS_COMPLETE) {
             $messageFlowOut->delete();
         }
 
-        return  $next($messageFlowOut);
+        return $next($messageFlowOut);
     }
 }

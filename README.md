@@ -6,147 +6,184 @@
 <!-- TOC -->
 
 - [Laravel Message Flow](#laravel-message-flow)
-    - [Background](#background)
-    - [Messages](#messages)
-    - [Reliability](#reliability)
-        - [Outbound Message Status](#outbound-message-status)
-    - [Flexibility](#flexibility)
-        - [Outbound Routing](#outbound-routing)
-    - [Configuration](#configuration)
+    - [Overview](#overview)
+    - [Concepts](#concepts)
+        - [Messages](#messages)
+        - [Outbound Flow](#outbound-flow)
+        - [Inbound Flow](#inbound-flow)
+        - [Routing Pipeline](#routing-pipeline)
+        - [Message Statuses](#message-statuses)
+    - [Configuration Overview](#configuration-overview)
 - [Installation](#installation)
     - [Requirements](#requirements)
     - [Install Using Composer](#install-using-composer)
     - [Publish Migrations and Config](#publish-migrations-and-config)
-    - [Example Configuration Using Redis](#example-configuration-using-redis)
-    - [Sending an example message](#sending-an-example-message)
+- [Setting Up a Shared Queue (Redis Example)](#setting-up-a-shared-queue-redis-example)
+    - [The Three Config Layers](#the-three-config-layers)
+    - [Step 1 — Redis Server Entry](#step-1--redis-server-entry)
+    - [Step 2 — Queue Entry](#step-2--queue-entry)
+    - [Step 3 — Sender: Outbound Routing](#step-3--sender-outbound-routing)
+    - [Step 4 — Receiver: Worker and Observer](#step-4--receiver-worker-and-observer)
+    - [Two-Way Communication](#two-way-communication)
 - [Artisan Commands](#artisan-commands)
     - [Create Message](#create-message)
     - [List Messages](#list-messages)
+    - [Purge Messages](#purge-messages)
 - [Testing](#testing)
-- [TODO](#todo)
 
 <!-- /TOC -->
 
-## Background
+## Overview
 
-This package provides a pipe between two (or more) Laravel applications,
-to send messages from a model on one application to a model on the
-other application. It uses Laravel queues to pass the message across.
-It attempts to do this robustly, reliably and flexibly.
+Laravel Message Flow is a lightweight messaging system for passing structured
+data between Laravel applications. It is built entirely on Laravel's queue
+system — if two applications can connect to the same queue (Redis, database,
+SQS, or any other driver), they can exchange messages.
 
-If you can share a single queue database between Laravel applications,
-then this package will support passing messages between these applications.
+There are no external dependencies beyond Laravel itself. No message broker
+to install, no new protocols to learn — just queue connections you already
+know how to configure.
 
-You can mix as many queue connections and queues as you like to route
-the messages between multiple applications.
-
-The use-case for this package is to replace a number of webhooks between
-a suite of applications. The webhooks were becoming difficult to set
-up, maintain and monitor. This package aims to tackle those problems.é
-
-## Messages
-
-A message is any data or object that can be serialised into JSON in a
-portable way. Being portable means the object can be deserialised without
-reference to any models or objects in the source application.
-It's just data that can stand on its own.
-
-Every message is given a UUID that gets carried across with it,
-and is given a name that can be used for routing to specific queues
-when sending, or routing to specific jobs when receiving.
-
-In its most basic implementation, this package will take a message saved
-to a model on one application, and move it to a model on
-another application.
-It does this using laravel queues as its communication channel.
+The original use-case was to replace fragile webhooks between a suite of
+applications with something easier to set up, monitor and maintain.
 
 ![Basic Message](docs/basic-message.svg)
 
-## Reliability
+## Concepts
 
-This package ensures the message is dispatched to a queue.
-Once dispatched, responsibility is handed over to the queuing broker
-and it is considered sent. There is no end-to-end confirmation of receipt,
-though that can be easily achieved with a simple message
-in the opposite direction.
+### Messages
 
-### Outbound Message Status
+A message is any JSON-serialisable data. Each message carries three things:
 
-This package will be observing the `MessageFlowOut` model.
-When an instance status reaches the `new` status, it will be dispatched to
-the queue it has been routed to. If it successfully dispatched, then its
-status will move to `processed`. If it could not be dispatched to the
-queue, then its status will be `failed`.
+- A **UUID** that uniquely identifies the message across applications.
+- A **name** used for routing (which queue to send to) and handling
+  (which observer processes it on the receiving side).
+- A **payload** — the JSON data itself, portable and self-contained with
+  no dependency on models or classes in the source application.
 
-You may use additional statuses for other states in your process, and they
-will be ignored.
+### Outbound Flow
 
-Optionally, a `processed` outbound `MessageFlowOut` model instance can be
-automatically deleted. A `failed` instance will never be deleted, so it
-can be retried. The approach taken here is that once a message is safely
-accepted by the queue, then it is no longer the responsilbility of the
-sending model.
+Sending a message is as simple as creating a `MessageFlowOut` model instance.
+An Eloquent observer detects the new record and dispatches it through a
+configurable **routing pipeline** that determines which queue connection and
+queue name to use, then pushes the message onto that queue.
 
-However, if it is important to know that the message was safely received
-and processed by the receiver, then a response channel can be set up
-to confirm this, simply by configuring the sender and receiver applications
-to send messages in the opposite direction. Different message names would
-be used to distinguish the different content and purpose of the original
-message and its acknowledgement response.
+The outbound message is stored in the `message_flow_out` table throughout
+this process, giving you a local audit trail of what was sent.
 
-![Basic Message](docs/ack-responses.svg)
+### Inbound Flow
 
-## Flexibility
+On the receiving application, a standard Laravel queue worker picks up the
+job and writes it to the local `message_flow_in` table as a `MessageFlowIn`
+model. Your application then handles the message via an Eloquent observer —
+the same pattern you already use for model events.
 
-To send a message, the payload is created as a `MessageFlowOut` model
-instance. A pipeline of actions then routes that message to the correct
-queue joining the two applications, and deletes it once it is safely
-in the queue.
+Once processed, the inbound message can be marked as `complete`, `failed`,
+or deleted, depending on your application's needs.
 
-You do, however, have full control of that pipeline, and can add or
-remove actions as necessary.
-For example, you can remove the `DeleteCompleteMessage` action so queued
-messages stay on the sender application for longer. You can add custom
-routing rules, or maybe "tee" the messages into multiple destinations
-(assuming that is not something you can do in the queue broker already).
-You may simply want to put in additional logging.
-The flexibility is there.
+### Routing Pipeline
 
-### Outbound Routing
+The outbound routing pipeline is a sequence of configurable pipe stages
+(using Laravel's `Pipeline`) that each message passes through before being
+dispatched. The default pipeline routes the message to a queue based on its
+name (via config mappings), dispatches it, and optionally cleans up the
+local record.
 
-*TODO: describe how message names route to queues and connections.*
+You have full control over this pipeline. You can add custom routing logic,
+logging, duplicate detection, or anything else — each stage is a simple
+class implementing a `handle` method.
 
-## Configuration
+### Message Statuses
 
-Here is an overview of the configuration steps:
+Both inbound and outbound messages track their lifecycle through a `status`
+column:
 
-1. On sender and receiver, create and configure a laravel queue that
-   will be shared by both applications.
-   An example configuration of a shared redis queue is given below,
-   but any driver can be used.
-2. Configure the Message Flow package to use the shared queue.
-3. Create an observer to handle inbound messages on the receiver.
+**Outbound (`MessageFlowOut`):**
+
+| Status     | Meaning                                         |
+|------------|--------------------------------------------------|
+| `new`      | Created, waiting to be routed and dispatched     |
+| `queued`   | Successfully dispatched to the queue             |
+| `complete` | Fully processed (dispatched, optionally acknowledged) |
+| `failed`   | Could not be dispatched — can be retried         |
+
+**Inbound (`MessageFlowIn`):**
+
+| Status     | Meaning                                         |
+|------------|--------------------------------------------------|
+| `new`      | Received, waiting for the application to handle  |
+| `complete` | Successfully processed by the application        |
+| `failed`   | Processing failed — can be retried               |
+
+Failed messages are never automatically deleted, so they can be inspected
+and retried. Completed messages can be cleaned up with the
+`message-flow:purge` artisan command or by enabling the
+`DeleteCompleteMessage` pipe in the outbound routing pipeline.
+
+Optionally, acknowledgement messages can be sent in the reverse direction
+to confirm end-to-end delivery:
+
+```mermaid
+sequenceDiagram
+    box Application A
+        participant AO as Out Model
+        participant AI as In Model
+    end
+    box Shared Queue Driver
+        participant QtoB as to-b
+        participant QtoA as to-a
+    end
+    box Application B
+        participant BI as In Model
+        participant BO as Out Model
+        participant BA as Jobs
+    end
+
+    Note over AO: Create message
+    activate AO
+    AO->>QtoB: Message
+    activate QtoB
+    QtoB->>BI: Message
+    deactivate QtoB
+    activate BI
+    BI->>BO: Create ack message
+    activate BO
+
+    BI->>BA: Dispatch to handler
+    activate BA
+    BA->>BA: Process message
+    BA->>BI: Mark complete / delete
+    deactivate BA
+    deactivate BI
+
+    BO->>QtoA: Ack message
+    activate QtoA
+    deactivate BO
+    QtoA->>AI: Ack message
+    deactivate QtoA
+    activate AI
+    AI->>AO: Delete original message
+    deactivate AI
+    deactivate AO
+```
+
+## Configuration Overview
+
+| Role | What to configure |
+| --- | --- |
+| **All apps** | Shared Redis entry + queue entry (Steps 1-2), identical on every app |
+| **Sender** | Outbound routing in `message-flow.php` (Step 3) |
+| **Receiver** | Queue worker + Eloquent observer (Step 4) |
+
+For two-way communication, each app is both sender and receiver —
+see [Two-Way Communication](#two-way-communication) below.
 
 # Installation
 
 ## Requirements
 
-- Laravel `8` or higher (laravel 7 is planned)
-- PHP `7.4` or higher
-
-This package is currently not registered on packagist.
-Until it is, add this entry into your `composer.json` repositories block.
-
-```json
-{
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/consilience/laravel-message-flow"
-        }
-    ]
-}
-```
+- PHP `8.4` or higher
+- Laravel `10`, `11` or `12`
 
 ## Install Using Composer
 
@@ -163,227 +200,223 @@ php artisan vendor:publish \
 
 You can then run `php artisan migrate` to migrate the database.
 
-## Example Configuration Using Redis
+# Setting Up a Shared Queue (Redis Example)
 
-We'll show an example of setting up the package for sender and receiver application with redis.
-First, we need a queue connection that is shared between the sender and receiver applications.
-We will use `redis` for te queue driver.
+This example uses Redis, but any queue driver supported by Laravel
+will work. The same four steps apply regardless of driver.
 
-Laravel, by default, sets a prefix for all redis keys that is unique to the application.
-This allows multiple applications to use a single redis database without keys clashing.
-For our purposes, we want a prefix that *is* shared between applications.
+## The Three Config Layers
 
-The application-wide prefix added to redis keys is defined in `config/database.php`:
+Laravel uses the word "connection" at several levels, which can be
+confusing. Setting up a shared queue touches three config files, each
+at a different layer:
 
-```
-    'redis' => [
+| Layer            | Config file               | What it names                                                          |
+| ---------------- | ------------------------- | ---------------------------------------------------------------------- |
+| **Redis server** | `config/database.php`     | How to reach a Redis instance and which key prefix to use              |
+| **Queue**        | `config/queue.php`        | A named queue that uses a particular Redis server entry as its backend |
+| **Message Flow** | `config/message-flow.php` | Which named queue to push messages onto                                |
 
-        'client' => env('REDIS_CLIENT', 'phpredis'),
+No changes to your existing Laravel defaults are needed — we just add
+new entries alongside them.
 
-        'options' => [
-            'cluster' => env('REDIS_CLUSTER', 'redis'),
+## Step 1 — Redis Server Entry
 
-            // Remove this default global prefix option:
+`config/database.php`
 
-            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
-        ],
-
-        // ...
-    ],
-```
-
-The `default` and the `cache` database entries will then need the prefix adding
-to them. This will restore the prefix to prevent them clashing with other
-applications using the same redis database:
-
-`config/database.php`:
-
-```
-    'redis' => [
-
-        'client' => env('REDIS_CLIENT', 'phpredis'),
-
-        'options' => [
-            'cluster' => env('REDIS_CLUSTER', 'redis'),
-        ],
-
-        'default' => [
-            'url' => env('REDIS_URL'),
-            'host' => env('REDIS_HOST', '127.0.0.1'),
-            'password' => env('REDIS_PASSWORD', null),
-            'port' => env('REDIS_PORT', '6379'),
-            'database' => env('REDIS_DB', '0'),
-
-            // Prefix needed here:
-
-            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
-        ],
-
-        'cache' => [
-            'url' => env('REDIS_URL'),
-            'host' => env('REDIS_HOST', '127.0.0.1'),
-            'password' => env('REDIS_PASSWORD', null),
-            'port' => env('REDIS_PORT', '6379'),
-            'database' => env('REDIS_CACHE_DB', '1'),
-            
-            // Prefix needed here:
-
-            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
-        ],
-    ],
-```
-
-Now to add the shared connection.
-This provides access to the redis database that both applications will share.
-
-`config/database.php`:
+Add a Redis entry with a **fixed prefix** so that every application
+sharing the queue sees the same keys, regardless of each app's global
+Redis prefix:
 
 ```php
-    'redis' => [
-        'client' => env('REDIS_CLIENT', 'phpredis'),
+'redis' => [
+    // Your existing options and entries stay unchanged.
 
-        // ...
-
-        // Give this connection any name other than your application name.
-        // You may need to set different credentials if the shared redis
-        // database is not the default database.
-
-        'message-flow-database' => [
-            'url' => env('REDIS_URL'),
-            'host' => env('REDIS_HOST', '127.0.0.1'),
-            'password' => env('REDIS_PASSWORD', null),
-            'port' => env('REDIS_PORT', '6379'),
-            'database' => env('REDIS_CACHE_DB', '0'),
-            'prefix' => 'message-flow:',
-        ],
+    // Shared Redis entry for message flow:
+    'message-flow-redis' => [
+        'url' => env('REDIS_URL'),
+        'host' => env('REDIS_HOST', '127.0.0.1'),
+        'password' => env('REDIS_PASSWORD', null),
+        'port' => env('REDIS_PORT', '6379'),
+        'database' => env('REDIS_DB', '0'),
+        'prefix' => 'message-flow:',
     ],
+],
 ```
 
-The shared queue connection, using redis, should now be complete.
-We can configure a queue using the shared connection:
+## Step 2 — Queue Entry
 
-`config/queue.php`:
+`config/queue.php`
+
+Add a queue entry that uses the Redis entry from Step 1 as its backend:
 
 ```php
-    'connections' => [
-        // ...
+'connections' => [
+    // ...
 
-        'message-flow-queue-connection' => [
-            'driver' => 'redis',
-            'connection' => 'message-flow-database',
-            'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => 90,
-            'block_for' => null,
-        ],
+    'message-flow-queue' => [
+        'driver' => 'redis',
+        'connection' => 'message-flow-redis', // ← Redis entry from Step 1
+        'queue' => 'default',
+        'retry_after' => 90,
+        'block_for' => null,
     ],
+],
 ```
 
-Now we configure *Message Flow* to use this connection and database.
+> **Steps 1 and 2 are identical on every application** sharing the same
+> message flow. They define the shared transport — not who sends or
+> receives.
 
-`config/message-flow.php`:
+## Step 3 — Sender: Outbound Routing
+
+`config/message-flow.php`
+
+Tell Message Flow which queue name to push outbound messages onto.
+**Name each queue after the receiver** — this keeps things unambiguous
+regardless of how many senders push to it:
 
 ```php
+'out' => [
     'name-mappings' => [
         'default' => [
-            'queue-connection' => 'message-flow-queue-connection',
-            'queue-name' => 'message-flow',
+            'queue-connection' => 'message-flow-queue', // ← queue entry from Step 2
+            'queue-name' => 'to-warehouse',             // ← what the receiver listens on
         ],
     ],
+],
 ```
 
-Both the sending and receiving applications will have the same settings.
-The receiving application will listen to the queue to handle the incoming
-messages:
+Different message names can route to different receivers:
 
-    php artisan queue:work message-flow-queue-connection --queue=message-flow
+```php
+'name-mappings' => [
+    'stock-update' => [
+        'queue-connection' => 'message-flow-queue',
+        'queue-name' => 'to-warehouse',
+    ],
+    'invoice-ready' => [
+        'queue-connection' => 'message-flow-queue',
+        'queue-name' => 'to-billing',
+    ],
+],
+```
 
-Note: for each shared queue, just one application will be subscribed to it
-and handling messages pushed onto it.
-Conversely, any number of applications can push messages onto that queue.
-If there are multiple applications sending messages to each other, it helps
-if each shared queue is named with reference to the application subscribed
-to it.
-
-## Sending an example message
-
-You can send a message simply by creating a new MessageFlowOut model from your sender application:
+Send a message by creating a `MessageFlowOut` record:
 
 ```php
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 
-MessageFlowOut::create(["payload" => ["data" => "test data here"]]);
-
-MessageFlowOut::create(["payload" => $myModel]);
+MessageFlowOut::create([
+    'name' => 'stock-update',
+    'payload' => ['sku' => 'ABC-123', 'qty' => 50],
+]);
 ```
 
-To retrieve the message from the receiver application, a listener can be
-pointed at the inbound model. Create an observer:
+An Eloquent observer dispatches the message through the routing
+pipeline automatically — no additional code needed on the sender side.
 
-    php artisan make:observer MessageFlowObserver \
-        --model='Consilience\Laravel\MessageFlow\Models\MessageFlowIn'
+## Step 4 — Receiver: Worker and Observer
 
-An example observer may be set up like this:
+**Start a worker** listening on the queue name that senders push to:
+
+```bash
+php artisan queue:work message-flow-queue --queue=to-warehouse
+```
+
+The first argument (`message-flow-queue`) is the queue entry from Step 2.
+The `--queue` flag is the queue name from the sender's Step 3 config.
+
+**Create an observer** to handle incoming messages:
+
+```bash
+php artisan make:observer MessageFlowObserver \
+    --model='Consilience\Laravel\MessageFlow\Models\MessageFlowIn'
+```
 
 ```php
-<?php
-
 namespace App\Observers;
 
 use Consilience\Laravel\MessageFlow\Models\MessageFlowIn;
 
 class MessageFlowObserver
 {
-    /**
-     * Handle the MessageFlowIn "created" event.
-     *
-     * @param  \Consilience\Laravel\MessageFlow\Models\MessageFlowIn $messageFlowIn
-     * @return void
-     */
-    public function created(MessageFlowIn $messageFlowIn)
+    public function created(MessageFlowIn $message): void
     {
-        if ($messageFlowIn->isNew()) {
-            // Process the message.
-
-            // ...
-
-            // A number of options once processed, either here or in
-            // a dispatched job:
-
-            $messageFlowIn->setComplete()->save(); // Set it as processed
-            $messageFlowIn->setFailed()->save(); // Set it as unprocessed
-            $messageFlowIn->delete(); // Delete the message (not before a dispatched job is processed)
-            // or a custom action or status.
+        if (! $message->isNew()) {
+            return;
         }
+
+        // Process the message payload.
+        // ...
+
+        $message->setComplete()->save();
+
+        // Or on failure:
+        // $message->setFailed()->save();
     }
 }
 ```
 
-The observer would need to be registered, for example in `App\Providers\EventServiceProvider`:
+**Register the observer** in a service provider:
 
 ```php
-<?php
-
-namespace App\Providers;
-
-use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowIn;
 use App\Observers\MessageFlowObserver;
 
-class EventServiceProvider extends ServiceProvider
+public function boot(): void
 {
-    //...
-
-    /**
-     * Register any events for your application.
-     *
-     * @return void
-     */
-    public function boot()
-    {
-        MessageFlowIn::observe(MessageFlowObserver::class);
-    }
+    MessageFlowIn::observe(MessageFlowObserver::class);
 }
 ```
+
+## Two-Way Communication
+
+When two applications need to send messages **to each other**, both act
+as sender and receiver. The shared infrastructure (Steps 1–2) stays
+identical on both apps. Each app just needs:
+
+- Its own **outbound routing** (Step 3) — pointing to the other app's
+  inbound queue
+- Its own **queue worker** (Step 4) — listening on its own inbound queue
+
+**Name each queue after the receiver.** This makes it clear who
+consumes which queue, regardless of how many senders push to it.
+
+| | Core app | Fulfilment app |
+| --- | --- | --- |
+| **Redis entry** (Step 1) | `message-flow-redis` | `message-flow-redis` (identical) |
+| **Queue entry** (Step 2) | `message-flow-queue` | `message-flow-queue` (identical) |
+| **Sends to** (Step 3) | `queue-name: 'to-fulfilment'` | `queue-name: 'to-core'` |
+| **Worker listens on** (Step 4) | `--queue=to-core` | `--queue=to-fulfilment` |
+
+Core's `config/message-flow.php`:
+
+```php
+'name-mappings' => [
+    'default' => [
+        'queue-connection' => 'message-flow-queue',
+        'queue-name' => 'to-fulfilment',
+    ],
+],
+```
+
+Fulfilment's `config/message-flow.php`:
+
+```php
+'name-mappings' => [
+    'default' => [
+        'queue-connection' => 'message-flow-queue',
+        'queue-name' => 'to-core',
+    ],
+],
+```
+
+Both apps share a **single Redis entry and a single queue entry** —
+only the outbound `queue-name` and the worker's `--queue` flag differ.
+
+For one-way messaging, only the sender needs Step 3 and only the
+receiver needs Step 4. For two-way, each app does both.
 
 # Artisan Commands
 
@@ -421,7 +454,7 @@ The `status` and `uuid` options can take multiple values.
 The `limit` option sets the number of records returned.
 This is effectively the page size.
 
-The `page` optuion specifies which page (of size `limit`) to display.
+The `page` option specifies which page (of size `limit`) to display.
 Page numbers start at 1 for the first page.
 
 The `process` option will dispatch jobs for messages that have not yet been processed.
@@ -433,26 +466,78 @@ to kick the custom observers into action.
 With the `-v` option, the payload will be included in the listing.
 Some payloads may be large.
 
+## Purge Messages
+
+This command deletes old messages from the inbound and/or outbound cache tables.
+By default it purges records with a `complete` status that were last updated
+more than 30 days ago.
+
+    php artisan message-flow:purge \
+        --days=30 \
+        --hours=0 \
+        --direction={inbound|outbound|both} \
+        --status={complete|failed} \
+        --dry-run
+
+The `--days` and `--hours` options are combined to set the age threshold.
+For example, `--days=1 --hours=12` purges records older than 36 hours,
+and `--days=0 --hours=6` purges records older than 6 hours.
+
+The `--direction` option defaults to `both`. Abbreviations are accepted
+(e.g. `--direction=in` or `--direction=out`).
+
+The `--status` option can be specified multiple times to purge records
+in more than one status. It defaults to `complete` if not specified.
+
+The `--dry-run` option shows how many records would be deleted without
+actually deleting them.
+
+### Running manually
+
+Purge all completed messages older than 30 days from both tables:
+
+    php artisan message-flow:purge
+
+Purge completed and failed inbound messages older than 7 days:
+
+    php artisan message-flow:purge --days=7 --direction=inbound --status=complete --status=failed
+
+Preview what would be deleted:
+
+    php artisan message-flow:purge --days=14 --dry-run
+
+### Scheduling
+
+To run the purge automatically, add it to your application's scheduler.
+
+In `routes/console.php` (Laravel 11+):
+
+```php
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('message-flow:purge --days=30')->daily();
+```
+
+Or in a service provider's `boot()` method:
+
+```php
+$this->app->booted(function () {
+    $schedule = app(\Illuminate\Console\Scheduling\Schedule::class);
+    $schedule->command('message-flow:purge --days=30')->daily();
+});
+```
+
 # Testing
 
-Unit tests can be run with `docker-compose` using the
-[excellent instructions here](https://thephp.website/en/issue/php-docker-quick-setup/)
+Tests use [Orchestra Testbench](https://github.com/orchestral/testbench) and PHPUnit:
 
-The tests are set up to run under PHP 7.4.
-To execute the unit tests run the `phpunit` service:
-
-    docker-compose run phpunit
-
-Additional options can be supplied if needed.
-The `composer` service provides support for composer running under the same PHP version:
-
-    docker-compose run composer list
-    docker-compose run composer update
+```bash
+composer test
+```
 
 # TODO
 
-* Overview of the states.
 * Names and routing (advanced config).
 * Outbound pipeline (advanced config).
 * Tests to complete.
-* Support testing against multiple framwework versions (7 and 8) and PHP versions.
+* A simple quickstart example with two applications talking to each other.

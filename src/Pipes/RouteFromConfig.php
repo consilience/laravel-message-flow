@@ -7,20 +7,17 @@ namespace Consilience\Laravel\MessageFlow\Pipes;
  */
 
 use Closure;
-use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Consilience\Laravel\MessageFlow\Contracts\RoutingPipe;
+use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 
 class RouteFromConfig implements RoutingPipe
 {
-    /**
-     * @inheritDoc
-     */
-    public function handle(MessageFlowOut $messageFlowOut, Closure $next)
+    public function handle(MessageFlowOut $messageFlowOut, Closure $next): mixed
     {
         if ($messageFlowOut->queue_connection !== null && $messageFlowOut->queue_name !== null) {
             // If the queue and connection are already chosen, then skip this pipe.
 
-            return  $next($messageFlowOut);
+            return $next($messageFlowOut);
         }
 
         $name = $messageFlowOut->name;
@@ -40,6 +37,6 @@ class RouteFromConfig implements RoutingPipe
 
         $messageFlowOut->save();
 
-        return  $next($messageFlowOut);
+        return $next($messageFlowOut);
     }
 }

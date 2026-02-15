@@ -7,66 +7,40 @@ use Consilience\Laravel\MessageFlow\Models\MessageFlowIn;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Throwable;
 
 class ListMessages extends Command
 {
-    const DIRECTION_INBOUND = 'inbound';
-    const DIRECTION_OUTBOUND = 'outbound';
+    public const DIRECTION_INBOUND = 'inbound';
+    public const DIRECTION_OUTBOUND = 'outbound';
 
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'message-flow:list-messages
         {--direction=outbound : The direction of the flow [inbound|outbound]}
         {--status=* : The statuses to view}
-        {--process : Process any records taht are still waiting to be handled}
+        {--process : Process any records that are still waiting to be handled}
         {--uuid=* : Match a single message}
         {--limit=20 : The maximum number of messages to match}
         {--page=1 : The page number to return, in ascending order}
     ';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'List messages currently stored';
 
-    /**
-     * Create a new command instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
-    public function handle()
+    public function handle(): int
     {
         $direction = $this->option('direction');
         $statuses = $this->option('status');
         $process = $this->option('process');
         $uuids = $this->option('uuid');
-        $limit = (int)$this->option('limit') ?? 20;
-        $page = (int)$this->option('page') ?? 1;
+        $limit = (int) $this->option('limit') ?: 20;
+        $page = (int) $this->option('page') ?: 1;
 
         $offset = ($page - 1) * $limit;
 
         // Validate direction, accepting any abbreviation.
 
-        if (strpos(static::DIRECTION_INBOUND, strtolower($direction)) === 0) {
+        if (str_starts_with(static::DIRECTION_INBOUND, strtolower($direction))) {
             $direction = static::DIRECTION_INBOUND;
             $query = MessageFlowIn::query();
-        } elseif (strpos(static::DIRECTION_OUTBOUND, strtolower($direction)) === 0) {
+        } elseif (str_starts_with(static::DIRECTION_OUTBOUND, strtolower($direction))) {
             $direction = static::DIRECTION_OUTBOUND;
             $query = MessageFlowOut::query();
         } else {

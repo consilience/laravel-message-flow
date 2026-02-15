@@ -7,22 +7,19 @@ namespace Consilience\Laravel\MessageFlow\Pipes;
  */
 
 use Closure;
-use Illuminate\Support\Facades\Log;
 use Consilience\Laravel\MessageFlow\Contracts\RoutingPipe;
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
+use Illuminate\Support\Facades\Log;
 
 class LogStartRoutingPipeline implements RoutingPipe
 {
-    /**
-     * @inheritDoc
-     */
-    public function handle(MessageFlowOut $messageFlowOut, Closure $next)
+    public function handle(MessageFlowOut $messageFlowOut, Closure $next): mixed
     {
         Log::info('Running routing pipeline', [
             'messageFlowOutUuid' => $messageFlowOut->uuid,
             'status' => $messageFlowOut->status,
         ]);
 
-        return  $next($messageFlowOut);
+        return $next($messageFlowOut);
     }
 }
