@@ -37,7 +37,7 @@
 
 Laravel Message Flow is a lightweight messaging system for passing structured
 data between Laravel applications. It is built entirely on Laravel's queue
-system — if two applications can connect to the same queue (Redis, database,
+system — if two or more applications can connect to the same queue (Redis, database,
 SQS, or any other driver), they can exchange messages.
 
 There are no external dependencies beyond Laravel itself. No message broker
@@ -56,7 +56,7 @@ applications with something easier to set up, monitor and maintain.
 A message is any JSON-serialisable data. Each message carries three things:
 
 - A **UUID** that uniquely identifies the message across applications.
-- A **name** used for routing (which queue to send to) and handling
+- A **name** used for routing (determines which queue to send to) and handling
   (which observer processes it on the receiving side).
 - A **payload** — the JSON data itself, portable and self-contained with
   no dependency on models or classes in the source application.
@@ -79,7 +79,7 @@ model. Your application then handles the message via an Eloquent observer —
 the same pattern you already use for model events.
 
 Once processed, the inbound message can be marked as `complete`, `failed`,
-or deleted, depending on your application's needs.
+or just deleted, depending on your application's needs.
 
 ### Routing Pipeline
 
@@ -100,7 +100,7 @@ column:
 
 **Outbound (`MessageFlowOut`):**
 
-| Status     | Meaning                                         |
+| Status     | Meaning                                          |
 |------------|--------------------------------------------------|
 | `new`      | Created, waiting to be routed and dispatched     |
 | `queued`   | Successfully dispatched to the queue             |
@@ -109,7 +109,7 @@ column:
 
 **Inbound (`MessageFlowIn`):**
 
-| Status     | Meaning                                         |
+| Status     | Meaning                                          |
 |------------|--------------------------------------------------|
 | `new`      | Received, waiting for the application to handle  |
 | `complete` | Successfully processed by the application        |
@@ -198,7 +198,8 @@ php artisan vendor:publish \
     --provider="Consilience\Laravel\MessageFlow\MessageFlowServiceProvider"
 ```
 
-You can then run `php artisan migrate` to migrate the database.
+You can then run `php artisan migrate` to create the message flow inbound
+and outbound tables.
 
 # Setting Up a Shared Queue (Redis Example)
 
@@ -211,11 +212,11 @@ Laravel uses the word "connection" at several levels, which can be
 confusing. Setting up a shared queue touches three config files, each
 at a different layer:
 
-| Layer            | Config file               | What it names                                                          |
-| ---------------- | ------------------------- | ---------------------------------------------------------------------- |
-| **Redis server** | `config/database.php`     | How to reach a Redis instance and which key prefix to use              |
-| **Queue**        | `config/queue.php`        | A named queue that uses a particular Redis server entry as its backend |
-| **Message Flow** | `config/message-flow.php` | Which named queue to push messages onto                                |
+| Layer            | Config file               | What it names                                                       |
+| ---------------- | ------------------------- | ------------------------------------------------------------------- |
+| **Redis server** | `config/database.php`     | How to reach a Redis server and which key prefix to use             |
+| **Queue**        | `config/queue.php`        | A named queue that uses the shared Redis server entry as its driver |
+| **Message Flow** | `config/message-flow.php` | Which connection and queue to push messages onto                    |
 
 No changes to your existing Laravel defaults are needed — we just add
 new entries alongside them.
@@ -239,6 +240,7 @@ Redis prefix:
         'password' => env('REDIS_PASSWORD', null),
         'port' => env('REDIS_PORT', '6379'),
         'database' => env('REDIS_DB', '0'),
+        // This is the shared prefix that all the apps use.
         'prefix' => 'message-flow:',
     ],
 ],
@@ -256,7 +258,10 @@ Add a queue entry that uses the Redis entry from Step 1 as its backend:
 
     'message-flow-queue' => [
         'driver' => 'redis',
-        'connection' => 'message-flow-redis', // ← Redis entry from Step 1
+        // Redis entry from Step 1
+        'connection' => 'message-flow-redis',
+        // You can specify the input queue here to save having to specify
+        // it later when the queue worker is run. Example: 'to-warehouse'
         'queue' => 'default',
         'retry_after' => 90,
         'block_for' => null,
@@ -287,7 +292,11 @@ regardless of how many senders push to it:
 ],
 ```
 
-Different message names can route to different receivers:
+In this example `to-warehouse` is the name of the queue that the warehouse app
+will be listening to.
+
+Different message names can route to different receivers. The warehouse and
+billing may be different apps:
 
 ```php
 'name-mappings' => [
@@ -302,7 +311,10 @@ Different message names can route to different receivers:
 ],
 ```
 
-Send a message by creating a `MessageFlowOut` record:
+Send a message by creating a `MessageFlowOut` record. `stock-update`
+here will both route the payload to the correct recipient queue,
+and can be used within the recipient application to send the message
+on to the correct handler:
 
 ```php
 use Consilience\Laravel\MessageFlow\Models\MessageFlowOut;
@@ -318,7 +330,8 @@ pipeline automatically — no additional code needed on the sender side.
 
 ## Step 4 — Receiver: Worker and Observer
 
-**Start a worker** listening on the queue name that senders push to:
+**Start a worker** listening on the queue name that senders push to.
+So the warehouse app may run this queue worker:
 
 ```bash
 php artisan queue:work message-flow-queue --queue=to-warehouse
@@ -326,6 +339,8 @@ php artisan queue:work message-flow-queue --queue=to-warehouse
 
 The first argument (`message-flow-queue`) is the queue entry from Step 2.
 The `--queue` flag is the queue name from the sender's Step 3 config.
+If the default queue name is set in step 2 to `to-warehouse` then this
+option can be omitted when running the queue worker.
 
 **Create an observer** to handle incoming messages:
 
@@ -348,7 +363,7 @@ class MessageFlowObserver
         }
 
         // Process the message payload.
-        // ...
+        // ...do what you like with $message->payload...
 
         $message->setComplete()->save();
 
@@ -377,24 +392,30 @@ as sender and receiver. The shared infrastructure (Steps 1–2) stays
 identical on both apps. Each app just needs:
 
 - Its own **outbound routing** (Step 3) — pointing to the other app's
-  inbound queue
-- Its own **queue worker** (Step 4) — listening on its own inbound queue
+  inbound queue.
+- Its own **queue worker** (Step 4) — listening on its own inbound queue.
 
 **Name each queue after the receiver.** This makes it clear who
 consumes which queue, regardless of how many senders push to it.
 
-| | Core app | Fulfilment app |
+| | Orders App | Fulfilment app |
 | --- | --- | --- |
 | **Redis entry** (Step 1) | `message-flow-redis` | `message-flow-redis` (identical) |
 | **Queue entry** (Step 2) | `message-flow-queue` | `message-flow-queue` (identical) |
-| **Sends to** (Step 3) | `queue-name: 'to-fulfilment'` | `queue-name: 'to-core'` |
-| **Worker listens on** (Step 4) | `--queue=to-core` | `--queue=to-fulfilment` |
+| **Sends to** (Step 3) | `queue-name: 'to-fulfilment'` | `queue-name: 'to-orders'` |
+| **Worker listens on** (Step 4) | `--queue=to-orders` | `--queue=to-fulfilment` |
 
-Core's `config/message-flow.php`:
+Orders App's `config/message-flow.php`:
 
 ```php
 'name-mappings' => [
-    'default' => [
+    // Where the "fulfilment" name messages will be routed.
+    'fulfilment' => [
+        'queue-connection' => 'message-flow-queue',
+        'queue-name' => 'to-fulfilment',
+    ],
+    // A stock-update message may also go to the fulfilment app.
+    'stock-update' => [
         'queue-connection' => 'message-flow-queue',
         'queue-name' => 'to-fulfilment',
     ],
@@ -405,15 +426,16 @@ Fulfilment's `config/message-flow.php`:
 
 ```php
 'name-mappings' => [
-    'default' => [
+    // Where the "order" name messages will be routed.
+    'order' => [
         'queue-connection' => 'message-flow-queue',
         'queue-name' => 'to-core',
     ],
 ],
 ```
 
-Both apps share a **single Redis entry and a single queue entry** —
-only the outbound `queue-name` and the worker's `--queue` flag differ.
+The `name-mappings` is where you map different message names to
+different destination apps.
 
 For one-way messaging, only the sender needs Step 3 and only the
 receiver needs Step 4. For two-way, each app does both.
@@ -425,11 +447,14 @@ This package introduces a few new artisan commands:
 ## Create Message
 
 This command allows you to create a new outbound message.
+This is mainly for testing
 
-    php artisan message-flow:create-message \
-        --name='routing-name' \
-        --payload='{"json":"payload"}' \
-        --status=new
+```bash
+php artisan message-flow:create-message \
+    --name='routing-name' \
+    --payload='{"json":"payload"}' \
+    --status=new
+```
 
 If no options are provided, the name will be `default`, the status `new` and
 the payload an empty object.
@@ -441,15 +466,17 @@ These are messages that are being sent, or have been sent and have
 not yet been deleted. They are also messages that have been received
 and also not been deleted.
 
-    php artisan message-flow:list-messages \
-        --direction={inbound|outbound} \
-        --status={new|complete|failed|other} \
-        --uuid={uuid-of-message} \
-        --limit=20 \
-        --page=1 \
-        --process
+```bash
+php artisan message-flow:list-messages \
+    --direction={inbound|outbound} \
+    --status={new|complete|failed|other} \
+    --uuid={uuid-of-message} \
+    --limit=20 \
+    --page=1 \
+    --process
+```
 
-The `status` and `uuid` options can take multiple values.
+The `status` and `uuid` options can take multiple values, comma-separated.
 
 The `limit` option sets the number of records returned.
 This is effectively the page size.
@@ -464,7 +491,7 @@ For inbound messages in the `new` state, this will fire the eloquent `created` e
 to kick the custom observers into action.
 
 With the `-v` option, the payload will be included in the listing.
-Some payloads may be large.
+Beware that some payloads may be large, depending on what you put into the payloads.
 
 ## Purge Messages
 
